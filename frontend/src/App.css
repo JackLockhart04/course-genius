@@ -1,0 +1,12 @@
+body {
+  background-color: #121212; /* Dark background color */
+  color: #ffffff; /* Light text color for contrast */
+  margin: 0;
+  font-family: Arial, sans-serif;
+}
+
+.appContainer {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}

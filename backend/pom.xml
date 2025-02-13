@@ -1,0 +1,125 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>nf.free.coursegenius</groupId>
+  <artifactId>course-genius</artifactId>
+  <packaging>jar</packaging>
+  <version>1.0</version>
+  <name>course-genius</name>
+  <url>http://maven.apache.org</url>
+  <dependencies>
+    <!-- MySQL Connector -->
+    <dependency>
+      <groupId>mysql</groupId>
+      <artifactId>mysql-connector-java</artifactId>
+      <version>8.0.26</version>
+    </dependency>
+    <!-- Spark for local server -->
+    <dependency>
+      <groupId>com.sparkjava</groupId>
+      <artifactId>spark-core</artifactId>
+      <version>2.9.3</version>
+      <scope>provided</scope>
+    </dependency>
+    <!-- Logback for SLF4J (Only neccessary for local testing) -->
+    <dependency>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-classic</artifactId>
+      <version>1.2.3</version>
+      <scope>provided</scope>
+    </dependency>
+    <!-- Javax for cookies -->
+    <dependency>
+      <groupId>javax.servlet</groupId>
+      <artifactId>javax.servlet-api</artifactId>
+      <version>4.0.1</version>
+      <scope>compile</scope>
+    </dependency>
+    <!-- Azure authentization -->
+		<dependency>
+			<groupId>com.microsoft.azure</groupId>
+			<artifactId>msal4j</artifactId>
+			<version>1.13.8</version>
+		</dependency>
+    <!-- JSON -->
+    <dependency>
+      <groupId>org.json</groupId>
+      <artifactId>json</artifactId>
+      <version>20210307</version>
+    </dependency>
+    <!-- AWS Lambda Java runtime -->
+    <dependency>
+      <groupId>com.amazonaws</groupId>
+      <artifactId>aws-lambda-java-core</artifactId>
+      <version>1.2.3</version>
+    </dependency>
+    <!-- Testing -->
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>3.8.1</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+  <build>
+    <plugins>
+      <!-- Maven Shade Plugin for creating an Uber JAR -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>3.4.1</version>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+              <createDependencyReducedPom>false</createDependencyReducedPom>
+              <shadedArtifactAttached>true</shadedArtifactAttached>
+              <shadedClassifierName>shaded</shadedClassifierName>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+  <profiles>
+    <profile>
+      <id>local</id>
+      <dependencies>
+        <!-- Spark for local server -->
+        <dependency>
+          <groupId>com.sparkjava</groupId>
+          <artifactId>spark-core</artifactId>
+          <version>2.9.3</version>
+        </dependency>
+        <!-- Logback for SLF4J (Only neccessary for local testing) -->
+        <dependency>
+          <groupId>ch.qos.logback</groupId>
+          <artifactId>logback-classic</artifactId>
+          <version>1.2.3</version>
+        </dependency>
+      </dependencies>
+    </profile>
+    <profile>
+      <id>production</id>
+      <build>
+        <plugins>
+          <!-- Maven Compiler Plugin to exclude LocalRun.java -->
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <version>3.11.0</version>
+            <configuration>
+              <excludes>
+                <!-- Exclude the LocalRun.java file from compilation -->
+                <exclude>nf/free/coursegenius/LocalRun.java</exclude>
+              </excludes>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+</project>

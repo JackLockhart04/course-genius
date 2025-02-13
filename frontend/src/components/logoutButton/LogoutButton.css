@@ -1,0 +1,25 @@
+.logoutContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background-color: #121212; /* Match the dark background color */
+  color: #ffffff; /* Light text color for contrast */
+  padding: 20px;
+}
+
+.logoutButton {
+  padding: 10px 20px;
+  font-size: 1rem;
+  color: #ffffff; /* Light text color for contrast */
+  background-color: #ff4d4d; /* Red background color */
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.logoutButton:hover {
+  background-color: #cc0000; /* Darker red on hover */
+}

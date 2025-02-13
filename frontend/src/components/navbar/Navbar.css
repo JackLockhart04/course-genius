@@ -1,0 +1,36 @@
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 60px;
+  background-color: #333; /* Dark background color */
+  color: white;
+  padding: 0 20px; /* Horizontal padding */
+  position: sticky;
+  top: 0;
+  z-index: 1000; /* Ensure the navbar stays on top of other content */
+}
+
+.navLink {
+  color: white; /* White text color for links */
+  text-decoration: none;
+  margin-right: 20px; /* Space between links */
+}
+
+.navLink:hover {
+  text-decoration: none;
+}
+
+.navLeft {
+  display: flex;
+  align-items: center;
+}
+
+.navRight {
+  display: flex;
+  align-items: center;
+}
+
+.spaceFiller {
+  flex-grow: 1;
+}
