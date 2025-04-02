@@ -16,6 +16,8 @@ public class App {
         registerRoute("/test", new TestRoute());
         registerRoute("/auth", new AuthRoute());
         registerRoute("/user", new UserRoute());
+        registerRoute("/course", new CourseRoute());
+        registerRoute("/assignment", new AssignmentRoute());
     }
 
     public void registerRoute(String path, Route routeHandler) {

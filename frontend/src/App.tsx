@@ -11,6 +11,7 @@ import Login from "./pages/login/Login";
 import Account from "./pages/account/Account";
 import Dashboard from "./pages/dashboard/Dashboard";
 import Course from "./pages/course/Course";
+import Assignment from "./pages/assignment/Assignment";
 
 const App: React.FC = () => {
   return (
@@ -25,6 +26,7 @@ const App: React.FC = () => {
             <Route path="/account" element={<Account />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/course/:courseId" element={<Course />} />
+            <Route path="/assignment/:assignmentId" element={<Assignment />} />
           </Routes>
         </div>
       </Router>

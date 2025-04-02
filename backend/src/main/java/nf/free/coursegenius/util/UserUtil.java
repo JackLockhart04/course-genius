@@ -21,11 +21,30 @@ public class UserUtil {
         }
     }
 
-    public Connection getConnection() throws SQLException {
+    public static Connection getConnection() throws SQLException {
         return DriverManager.getConnection(AppConfig.dbUrl, AppConfig.dbUsername, AppConfig.dbPassword);
     }
 
-    public User getUserByOid(String oid) {
+    public static String getUserOidByAccessToken(String accessToken){
+        if (accessToken == null || accessToken.isEmpty()) {
+            throw new RuntimeException("Access token cannot be null or empty");
+        }
+        // Get user data from token
+        Map<String, Object> userData = TokenUtil.getUserDataFromToken(accessToken);
+        if (userData == null || userData.isEmpty()) {
+            throw new RuntimeException("Invalid access token");
+        }
+        // Get user ID from token data
+        String userOid = userData.get("oid").toString();
+        
+        return userOid;
+    }
+
+    public static User getUserByOid(String oid) {
+        if (oid == null || oid.isEmpty()) {
+            throw new IllegalArgumentException("User ID cannot be null or empty");
+        }
+        // Get user
         String sql = "SELECT * FROM user WHERE oid = ?";
         try (Connection conn = getConnection();
              PreparedStatement statement = conn.prepareStatement(sql)) {
@@ -50,7 +69,7 @@ public class UserUtil {
         return new User(id, oid, username, email);
     }
 
-    private User resultSetToUser(ResultSet rs) throws SQLException {
+    private static User resultSetToUser(ResultSet rs) throws SQLException {
         int id = rs.getInt("id");
         String oid = rs.getString("oid");
         String username = rs.getString("username");

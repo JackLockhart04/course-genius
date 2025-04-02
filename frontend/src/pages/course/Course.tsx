@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 
 import "./Course.css";
 
@@ -23,12 +23,13 @@ const Course: React.FC = () => {
 
   const apiDomain = process.env.REACT_APP_API_DOMAIN;
 
+  // Fetch courses on load
   useEffect(() => {
     // Get data
     const fetchCourse = async () => {
       try {
         const response = await fetch(
-          `${apiDomain}/course/get-course/${courseId}`,
+          `${apiDomain}/course/get-course?courseId=${courseId}`,
           {
             method: "GET",
             headers: {
@@ -40,13 +41,7 @@ const Course: React.FC = () => {
         // If good response
         if (response.ok) {
           const data = await response.json();
-          // good backend response
-          if (data.success) {
-            setCourse(data.data);
-          } else {
-            // bad backend response
-            setError(data.message);
-          }
+          setCourse(data.course);
         } else {
           // bad response
           setError("Failed to fetch course");
@@ -59,6 +54,30 @@ const Course: React.FC = () => {
     // Call
     fetchCourse();
   }, [courseId]);
+
+  // Delete course handler
+  const deleteCourse = async () => {
+    try {
+      const response = await fetch(`${apiDomain}/course/delete-course`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include", // Include cookies in the request
+        body: JSON.stringify({ courseId }),
+      });
+
+      if (response.ok) {
+        // Redirect to dashboard
+        window.location.href = "/dashboard";
+      } else {
+        const errorData = await response.json();
+        setError(errorData.message || "Failed to delete course");
+      }
+    } catch (error) {
+      setError("Error deleting course");
+    }
+  };
 
   if (error) {
     return <div className="error">{error}</div>;
@@ -76,15 +95,21 @@ const Course: React.FC = () => {
       {course.assignments.length > 0 ? (
         course.assignments.map((assignment) => (
           <div key={assignment.id} className="assignmentRow">
-            <span className="assignmentItem">
+            <Link
+              to={`/assignment/${assignment.id}`}
+              className="assignmentItem"
+            >
               {assignment.name}, Weight: {assignment.weight}%, Grade:{" "}
               {assignment.grade ?? "N/A"}
-            </span>
+            </Link>
           </div>
         ))
       ) : (
         <p>No assignments found</p>
       )}
+      <button className="deleteButton" onClick={deleteCourse}>
+        Delete Course
+      </button>
     </div>
   );
 };

@@ -38,16 +38,28 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({
       try {
         const response = await fetch(`${apiDomain}/user/get-user-data`, {
           method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
           credentials: "include", // Include credentials (cookies) in the request
         });
         // Handle data
         if (response.ok) {
           const data = await response.json();
+          if (data.id === null) {
+            setUser({
+              id: null,
+              username: null,
+              email: null,
+              loggedIn: false,
+            });
+            return;
+          }
           setUser({
             id: data.id,
             username: data.username,
             email: data.email,
-            loggedIn: data.loggedIn,
+            loggedIn: true,
           });
         } else {
           // Bad response

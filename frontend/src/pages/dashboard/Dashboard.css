@@ -34,3 +34,7 @@
 .courseItem:hover {
   text-decoration: underline; /* Optional: Add underline on hover */
 }
+
+.message {
+  font-size: 1.2em;
+}

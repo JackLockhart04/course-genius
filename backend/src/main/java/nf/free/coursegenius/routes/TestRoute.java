@@ -16,19 +16,12 @@ public class TestRoute extends Route{
     }
 
     public void registerRoutes() {
-        registerHandler("/", "GET", this::root);
         registerHandler("/config", "GET", this::config);
         registerHandler("/cookie",  "GET", this::cookie);
         registerHandler("/redirect",  "GET", this::redirect);
         registerHandler("/",  "GET", this::get);
         registerHandler("/",  "POST", this::post);
-    }
-
-    public ResponseObject root(RequestContext ctx) {
-        ResponseObject response = new ResponseObject();
-        response.setStatusCode(200);
-        response.addBody("message", "Hello, from test root");
-        return response;
+        registerHandler("/query",  "GET", this::getQuery);
     }
 
     public ResponseObject config(RequestContext ctx) {
@@ -72,6 +65,14 @@ public class TestRoute extends Route{
         response.setStatusCode(200);
         response.addBody("message", "Hello, test from POST");
         response.addBody("POSTED", ctx.getBody());
+        return response;
+    }
+
+    public ResponseObject getQuery(RequestContext ctx) {
+        ResponseObject response = new ResponseObject();
+        response.setStatusCode(200);
+        response.addBody("message", "Hello, from test GET with query");
+        response.addBody("query", ctx.getQueryStringParameters());
         return response;
     }
 }

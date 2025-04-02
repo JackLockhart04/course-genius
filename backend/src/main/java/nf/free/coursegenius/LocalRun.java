@@ -28,17 +28,12 @@ public class LocalRun {
         Integer port = 4567;
         Spark.port(port);
 
+        // CORS handling
+        Spark.before((request, response) -> {
+            addCorsHeaders(request, response);
+        });
+
         Spark.options("/*", (request, response) -> {
-            String accessControlRequestHeaders = request.headers("Access-Control-Request-Headers");
-            if (accessControlRequestHeaders != null) {
-                response.header("Access-Control-Allow-Headers", accessControlRequestHeaders);
-            }
-
-            String accessControlRequestMethod = request.headers("Access-Control-Request-Method");
-            if (accessControlRequestMethod != null) {
-                response.header("Access-Control-Allow-Methods", accessControlRequestMethod);
-            }
-
             return "OK";
         });
 
@@ -121,18 +116,12 @@ public class LocalRun {
                 response.header(entry.getKey(), entry.getValue());
             }
 
-            // Add CORS headers to the response
-            addCorsHeaders(request, response);
-
             System.out.println("Response: " + response.body());
             return response.body();
         } catch (Exception e) {
             e.printStackTrace();
             response.status(500);
             response.body("Internal server error");
-
-            // Add CORS headers to the error response
-            addCorsHeaders(request, response);
 
             return response.body();
         }

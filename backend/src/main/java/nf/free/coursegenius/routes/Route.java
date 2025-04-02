@@ -1,7 +1,6 @@
 package nf.free.coursegenius.routes;
 
-import nf.free.coursegenius.dto.ResponseObject;
-import nf.free.coursegenius.dto.RequestContext;
+import nf.free.coursegenius.dto.*;
 import nf.free.coursegenius.exceptions.RouteException;
 
 import java.util.HashMap;

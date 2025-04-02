@@ -27,8 +27,8 @@ public class UserRoute extends Route {
         String accessToken = ctx.getCookie("accessToken");
 
         if (accessToken == null) {
-            response.setStatusCode(401);
-            response.addBody("message", "Unauthorized: No access token provided");
+            response.setStatusCode(200);
+            response.addBody("message", "Not logged in: No access token found");
             return response;
         }
 
@@ -41,8 +41,7 @@ public class UserRoute extends Route {
                 return response;
             }
 
-            UserUtil userUtil = new UserUtil();
-            User user = userUtil.getUserByOid(oid);
+            User user = UserUtil.getUserByOid(oid);
             if (user != null) {
                 response.setStatusCode(200);
                 

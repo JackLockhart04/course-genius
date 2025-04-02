@@ -11,6 +11,7 @@ interface Course {
 const Dashboard: React.FC = () => {
   const { user, loading } = useUser();
   const [courses, setCourses] = useState<Course[]>([]);
+  const [loadingCourses, setLoadingCourses] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const apiDomain = process.env.REACT_APP_API_DOMAIN;
@@ -32,16 +33,10 @@ const Dashboard: React.FC = () => {
         // Good response
         if (response.ok) {
           const responseData = await response.json();
-          if (responseData.success) {
-            const courseData = responseData.data;
-            setCourses(courseData);
-          } else {
-            // Bad response
-            setError("Failed to fetch courses");
+          if (responseData) {
+            setCourses(responseData.courses);
+            setLoadingCourses(false);
           }
-        } else {
-          // Bad response
-          setError("Failed to fetch courses");
         }
       } catch (error) {
         // Handle errors
@@ -53,13 +48,29 @@ const Dashboard: React.FC = () => {
     fetchCourses();
   }, [user]);
 
-  // Only show loged in users
+  // Only show logged in users
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="dashboardContainer">
+        <div className="message">Loading...</div>
+      </div>
+    );
   }
 
   if (!user.loggedIn) {
-    return <div>You need to log in to view this page</div>;
+    return (
+      <div className="dashboardContainer">
+        <div className="message">You need to log in to view this page</div>
+      </div>
+    );
+  }
+
+  if (loadingCourses) {
+    return (
+      <div className="dashboardContainer">
+        <div className="message">Loading courses...</div>
+      </div>
+    );
   }
 
   // Add course function

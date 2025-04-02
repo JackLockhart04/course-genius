@@ -28,6 +28,16 @@ public class LambdaHandler implements RequestHandler<Map<String, Object>, Lambda
         String method = (String) http.get("method");
         ctxInput.put("method", method);
 
+        // Body
+        Object body = input.get("body");
+        if (body instanceof String) {
+            ctxInput.put("body", body);
+        } else if (body instanceof Map) {
+            ctxInput.put("body", body);
+        } else {
+            ctxInput.put("body", null);
+        }
+
         // Cookies
         Map<String, String> cookies = new HashMap<>();
         Object cookiesObject = input.get("cookies");
@@ -46,12 +56,39 @@ public class LambdaHandler implements RequestHandler<Map<String, Object>, Lambda
         ctxInput.put("headers", input.get("headers"));
 
         // Find query parameters
-        Map<String, Object> queryStringParameters = (Map<String, Object>) http.get("queryStringParameters");
+        Map<String, Object> queryStringParameters = (Map<String, Object>) input.get("queryStringParameters");
         ctxInput.put("queryStringParameters", queryStringParameters);
 
         RequestContext ctx = new RequestContext(ctxInput);
+        System.out.println("Handling request for path: " + ctx.getPath() + ", method: " + ctx.getMethod());
+
+        // Handle preflight OPTIONS request
+        if ("OPTIONS".equalsIgnoreCase(method)) {
+            LambdaResponse response = new LambdaResponse();
+            response.statusCode = 200;
+            // String origin = (String) ((Map<String, Object>) input.get("headers")).get("origin");
+            // if (origin != null) {
+            //     response.addHeader("Access-Control-Allow-Origin", origin);
+            // }
+            // response.addHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+            // response.addHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+            // response.addHeader("Access-Control-Allow-Credentials", "true");
+            System.out.println("Returning OPTIONS response");
+            return response;
+        }
 
         App app = new App();
-        return app.handleRequest(ctx).toLambdaResponse();
+        LambdaResponse response = app.handleRequest(ctx).toLambdaResponse();
+
+        // Add CORS headers
+        // String origin = (String) ((Map<String, Object>) input.get("headers")).get("origin");
+        // if (origin != null) {
+        //     response.addHeader("Access-Control-Allow-Origin", origin);
+        // }
+        // response.addHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+        // response.addHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+        // response.addHeader("Access-Control-Allow-Credentials", "true");
+        System.out.println("Returning " + method + " response");
+        return response;
     }
 }

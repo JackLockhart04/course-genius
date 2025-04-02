@@ -8,6 +8,7 @@ Connect to ftp server (I used filezilla)
 Build by running `npm run build`
 Connect to ftp server with filezilla or MobaXterm and use server-stuff.txt credentials
 Transfer build files to ftp server dir "htdocs"
+Make sure .htaccess from frontend dir stays in the htdocs dir on the server
 
 ## Available Scripts
 
@@ -30,4 +31,3 @@ Builds the app for production to the `build` folder.
 Uses .env.production
 It correctly bundles React in production mode and optimizes the build for the best performance.
 Your app is ready to be deployed!
-
