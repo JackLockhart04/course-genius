@@ -3,6 +3,7 @@ package nf.free.coursegenius.routes;
 import nf.free.coursegenius.dto.ResponseObject;
 import nf.free.coursegenius.dto.RequestContext;
 import nf.free.coursegenius.config.AppConfig;
+import nf.free.coursegenius.exceptions.ApiException;
 
 import javax.servlet.http.Cookie;
 
@@ -61,6 +62,9 @@ public class TestRoute extends Route{
     }
 
     public ResponseObject post(RequestContext ctx) {
+        if(ctx.getBody() == null) {
+            throw new ApiException("Missing body", 400);
+        }
         ResponseObject response = new ResponseObject();
         response.setStatusCode(200);
         response.addBody("message", "Hello, test from POST");
@@ -69,6 +73,9 @@ public class TestRoute extends Route{
     }
 
     public ResponseObject getQuery(RequestContext ctx) {
+        if(ctx.getQueryStringParameters() == null) {
+            throw new ApiException("Missing query string parameters", 400);
+        }
         ResponseObject response = new ResponseObject();
         response.setStatusCode(200);
         response.addBody("message", "Hello, from test GET with query");

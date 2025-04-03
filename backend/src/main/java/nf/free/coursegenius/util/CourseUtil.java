@@ -4,6 +4,7 @@ import nf.free.coursegenius.config.AppConfig;
 import nf.free.coursegenius.dto.Assignment;
 import nf.free.coursegenius.dto.Course;
 import nf.free.coursegenius.dto.User;
+import nf.free.coursegenius.exceptions.ApiException;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -21,20 +22,24 @@ public class CourseUtil {
         try {
             Class.forName(AppConfig.dbDriverClassName);
         } catch (ClassNotFoundException e) {
-            throw new RuntimeException("Failed to load database driver", e);
+            throw new ApiException("Failed to load database driver", 500);
         }
     }
 
-    public static Connection getConnection() throws SQLException {
-        return DriverManager.getConnection(AppConfig.dbUrl, AppConfig.dbUsername, AppConfig.dbPassword);
+    public static Connection getConnection() {
+        try {
+            return DriverManager.getConnection(AppConfig.dbUrl, AppConfig.dbUsername, AppConfig.dbPassword);
+        } catch (SQLException e) {
+            throw new ApiException("Failed to connect to database: " + e.getMessage(), 500);
+        }
     }
 
     public static void addCourse(String courseName, String userOid) {
         if (courseName == null || courseName.isEmpty()) {
-            throw new RuntimeException("Course name cannot be null or empty");
+            throw new ApiException("Course name cannot be null or empty", 400);
         }
         if (userOid == null || userOid.isEmpty()) {
-            throw new RuntimeException("User ID cannot be null or empty");
+            throw new ApiException("User ID cannot be null or empty", 400);
         }
 
         // User stuff
@@ -49,10 +54,10 @@ public class CourseUtil {
             checkStatement.setString(2, courseName);
             ResultSet rs = checkStatement.executeQuery();
             if (rs.next() && rs.getInt(1) > 0) {
-                throw new RuntimeException("Course already exists for this user");
+                throw new ApiException("Course already exists for this user", 409);
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new ApiException("Error checking course existence: " + e.getMessage(), 500);
         }
 
         String sql = "INSERT INTO course (user_id, name) VALUES (?, ?)";
@@ -62,16 +67,16 @@ public class CourseUtil {
             statement.setString(2, courseName);
             statement.executeUpdate();
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new ApiException("Error adding course: " + e.getMessage(), 500);
         }
     }
 
     public static void deleteCourseById(int courseId, String userOid) {
         if (courseId <= 0) {
-            throw new RuntimeException("Invalid course ID");
+            throw new ApiException("Invalid course ID", 400);
         }
         if (userOid == null || userOid.isEmpty()) {
-            throw new RuntimeException("User ID cannot be null or empty");
+            throw new ApiException("User ID cannot be null or empty", 400);
         }
         
         // Check if the course exists and belongs to user
@@ -84,10 +89,10 @@ public class CourseUtil {
             checkStatement.setInt(2, userId);
             ResultSet rs = checkStatement.executeQuery();
             if (rs.next() && rs.getInt(1) == 0) {
-                throw new RuntimeException("Course does not exist or does not belong to this user");
+                throw new ApiException("Course does not exist or does not belong to this user", 404);
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new ApiException("Error checking course existence: " + e.getMessage(), 500);
         }
 
         // Delete the course
@@ -97,7 +102,7 @@ public class CourseUtil {
             statement.setInt(1, courseId);
             statement.executeUpdate();
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new ApiException("Error deleting course: " + e.getMessage(), 500);
         }
     }
 
@@ -134,7 +139,7 @@ public class CourseUtil {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new ApiException("Error retrieving courses: " + e.getMessage(), 500);
         }
         return new ArrayList<>(courseMap.values());
     }
@@ -169,7 +174,7 @@ public class CourseUtil {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new ApiException("Error retrieving course: " + e.getMessage(), 500);
         }
         return course;
     }

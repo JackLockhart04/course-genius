@@ -1,7 +1,7 @@
 package nf.free.coursegenius.routes;
 
 import nf.free.coursegenius.dto.ResponseObject;
-import nf.free.coursegenius.exceptions.RouteException;
+import nf.free.coursegenius.exceptions.ApiException;
 import nf.free.coursegenius.dto.RequestContext;
 import nf.free.coursegenius.dto.Course;
 import nf.free.coursegenius.dto.User;
@@ -31,65 +31,63 @@ public class CourseRoute extends Route {
 
     public ResponseObject addCourse(RequestContext ctx){
         ResponseObject response = new ResponseObject();
+        // Get user access token from cookies
         String userAccessToken = ctx.getCookie("accessToken");
-
+        
+        // Get userOid from access token
         String userOid = UserUtil.getUserOidByAccessToken(userAccessToken);
-        if (userOid == null) {
-            throw new RouteException("Invalid access token", 401);
+
+        // Get courseName from request body
+        Object courseNameObj = ctx.getBody().get("courseName");
+        if (courseNameObj == null) {
+            throw new ApiException("Missing courseName parameter", 400);
+        }
+        String courseName = courseNameObj.toString();
+        if (courseName == null || courseName.isEmpty()) {
+            throw new ApiException("Something went wrong with courseName parameter", 400);
         }
 
-        try {
-            System.out.println("Body: " + ctx.getBody());
-            Object courseNameObj = ctx.getBody().get("courseName");
-            if (courseNameObj == null) {
-                throw new RouteException("Missing courseName parameter", 400);
-            }
-            String courseName = courseNameObj.toString();
+        // Add course - CourseUtil handles errors
+        CourseUtil.addCourse(courseName, userOid);
 
-            if (courseName == null || courseName.isEmpty()) {
-                throw new RouteException("Missing courseName parameter", 400);
-            }
-            CourseUtil.addCourse(courseName, userOid);
-            response.setStatusCode(200);
-            response.addBody("message", "Course added successfully");
-        } catch (Exception e) {
-            throw new RuntimeException("Internal server error: " + e.getMessage());
-        }
-
+        // Return success response
+        response.setStatusCode(200);
+        response.addBody("message", "Course added successfully");
         return response;
     }
 
     public ResponseObject deleteCourse(RequestContext ctx) {
         ResponseObject response = new ResponseObject();
+
+        // Get user access token from cookies
         String userAccessToken = ctx.getCookie("accessToken");
         if (userAccessToken == null) {
-            throw new RouteException("No access token given, not logged in", 401);
+            throw new ApiException("No access token given, not logged in", 401);
         }
 
+        // Get userOid from access token
         String userOid = TokenUtil.getUserDataFromToken(userAccessToken).get("oid").toString();
         if (userOid == null) {
-            throw new RouteException("Invalid access token", 401);
+            throw new ApiException("Invalid access token", 400);
         }
 
-        try {
-            Object courseIdObj = ctx.getBody().get("courseId");
-            if (courseIdObj == null) {
-                throw new RouteException("Missing courseId parameter", 400);
-            }
-            String courseIdStr = courseIdObj.toString();
-            if (courseIdStr == null || courseIdStr.isEmpty()) {
-                throw new RouteException("Course Id is broken?", 400);
-            }
-            
-            int courseId = Integer.parseInt(courseIdStr);
-            CourseUtil.deleteCourseById(courseId, userOid);
-            response.setStatusCode(200);
-            response.addBody("message", "Course deleted successfully");
-        } catch (NumberFormatException e) {
-            throw new RouteException("Invalid courseId parameter", 400);
-        } catch (Exception e) {
-            throw new RuntimeException("Internal server error: " + e.getMessage());
+        // Get courseID from request body
+        Object courseIdObj = ctx.getBody().get("courseId");
+        if (courseIdObj == null) {
+            throw new ApiException("Missing courseId parameter", 400);
         }
+        String courseIdStr = courseIdObj.toString();
+        if (courseIdStr == null || courseIdStr.isEmpty()) {
+            throw new ApiException("Course Id is broken?", 400);
+        }
+        int courseId = Integer.parseInt(courseIdStr);
+
+        // Delete course
+        CourseUtil.deleteCourseById(courseId, userOid);
+
+        // Return success response
+        response.setStatusCode(200);
+        response.addBody("message", "Course deleted successfully");
 
         return response;
     }
@@ -97,25 +95,23 @@ public class CourseRoute extends Route {
     public ResponseObject getCoursesByUser(RequestContext ctx) {
         ResponseObject response = new ResponseObject();
 
+        // Get user access token from cookies
         String userAccessToken = ctx.getCookie("accessToken");
         if (userAccessToken == null) {
-            throw new RouteException("No access token given, not logged in", 401);
+            throw new ApiException("No access token given, not logged in", 401);
         }
 
+        // Get userOid from access token
         String userOid = TokenUtil.getUserDataFromToken(userAccessToken).get("oid").toString();
-
+        // Get userId from userOid
         User user = UserUtil.getUserByOid(userOid);
 
-        try {
-            List<Course> courses = CourseUtil.getCoursesByUserId(user.getId());
-            response.setStatusCode(200);
-            response.addBody("courses", courses);
-        } catch (NumberFormatException e) {
-            throw new RouteException("Invalid userId parameter", 400);
-        } catch (Exception e) {
-            throw new RuntimeException("Internal server error: " + e.getMessage());
-        }
+        // Get courses by userId
+        List<Course> courses = CourseUtil.getCoursesByUserId(user.getId());
 
+        // Return success response
+        response.setStatusCode(200);
+        response.addBody("courses", courses);
         return response;
     }
 
@@ -124,7 +120,7 @@ public class CourseRoute extends Route {
         String courseIdStr = ctx.getQueryStringParameters().get("courseId");
 
         if (courseIdStr == null) {
-            throw new RouteException("Missing courseId parameter", 400);
+            throw new ApiException("Missing courseId parameter", 400);
         }
 
         try {
@@ -138,9 +134,9 @@ public class CourseRoute extends Route {
                 response.addBody("message", "Course not found");
             }
         } catch (NumberFormatException e) {
-            throw new RouteException("Invalid courseId parameter", 400);
+            throw new ApiException("Invalid courseId parameter", 400);
         } catch (Exception e) {
-            throw new RuntimeException("Internal server error: " + e.getMessage());
+            throw new ApiException("Internal server error: " + e.getMessage(), 500);
         }
 
         return response;

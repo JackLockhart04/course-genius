@@ -1,7 +1,7 @@
 package nf.free.coursegenius.routes;
 
 import nf.free.coursegenius.dto.*;
-import nf.free.coursegenius.exceptions.RouteException;
+import nf.free.coursegenius.exceptions.ApiException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -27,18 +27,18 @@ public abstract class Route {
         else if (method.equals("POST")) {
             postHandlers.put(path, handler);
         } else {
-            throw new RouteException("Invalid method registered", 500);
+            throw new ApiException("Invalid method registered", 500);
         }
     }
 
     public ResponseObject handle(RequestContext ctx) {
         // Ensure its the correct path
         if (!ctx.getPathParts()[0].equals(path)) {
-            throw new RouteException("Route path does not match", 500);
+            throw new ApiException("Route path does not match", 500);
         }
         // FIXME for now only allow 1 level deep paths
         if(ctx.getPathParts().length > 2) {
-            throw new RouteException("Route path not found", 404);
+            throw new ApiException("Route path not found", 404);
         }
         // Remove the base path from the request path
         String[] pathParts = ctx.getPathParts();
@@ -54,7 +54,7 @@ public abstract class Route {
                 return postHandlers.get(pathPart).apply(ctx);
             }
         }
-        throw new RouteException("Route handler not found", 404);
+        throw new ApiException("Route handler not found", 404);
     }
 
     // Subclasses must implement this method

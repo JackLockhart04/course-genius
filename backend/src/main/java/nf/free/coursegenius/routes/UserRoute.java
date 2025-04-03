@@ -5,6 +5,7 @@ import nf.free.coursegenius.dto.RequestContext;
 import nf.free.coursegenius.util.TokenUtil;
 import nf.free.coursegenius.util.UserUtil;
 import nf.free.coursegenius.dto.User;
+import nf.free.coursegenius.exceptions.ApiException;
 
 import java.util.Map;
 
@@ -32,32 +33,24 @@ public class UserRoute extends Route {
             return response;
         }
 
-        try {
-            Map<String, Object> userData = TokenUtil.getUserDataFromToken(accessToken);
-            String oid = (String) userData.get("oid");
-            if (oid == null) {
-                response.setStatusCode(401);
-                response.addBody("message", "Unauthorized: Invalid access token");
-                return response;
-            }
-
-            User user = UserUtil.getUserByOid(oid);
-            if (user != null) {
-                response.setStatusCode(200);
-                
-                response.addBody("id", user.getId());
-                response.addBody("oid", user.getOid());
-                response.addBody("username", user.getUsername());
-                response.addBody("email", user.getEmail());
-            } else {
-                System.out.println("User not found");
-                response.setStatusCode(404);
-                response.addBody("message", "User not found");
-            }
-        } catch (Exception e) {
-            response.setStatusCode(500);
-            response.addBody("message", "Internal server error: " + e.getMessage());
+        Map<String, Object> userData = TokenUtil.getUserDataFromToken(accessToken);
+        String oid = userData.get("oid").toString();
+        if (oid == null || oid.isEmpty()) {
+            throw new ApiException("OID not found in token data", 400);
         }
+
+        // Find user
+        User user = UserUtil.getUserByOid(oid);
+        if (user == null) {
+            throw new ApiException("User not found", 404);
+        }
+
+        // Return data
+        response.setStatusCode(200);
+        response.addBody("id", user.getId());
+        response.addBody("oid", user.getOid());
+        response.addBody("username", user.getUsername());
+        response.addBody("email", user.getEmail());
 
         return response;
     }

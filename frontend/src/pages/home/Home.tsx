@@ -5,9 +5,6 @@ import { useUser } from "../../context/UserContext";
 const Home: React.FC = () => {
   const apiDomain = process.env.REACT_APP_API_DOMAIN;
 
-  console.log("API Domain: ", apiDomain);
-  console.log(process.env);
-
   const login = () => {
     window.location.href = apiDomain + "/auth/login";
   };

@@ -1,9 +1,9 @@
 package nf.free.coursegenius.exceptions;
 
-public class RouteException extends RuntimeException {
+public class ApiException extends RuntimeException {
     private int errorCode;
 
-    public RouteException(String message, int errorCode) {
+    public ApiException(String message, int errorCode) {
         super(message);
         this.errorCode = errorCode;
     }

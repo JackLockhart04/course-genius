@@ -46,7 +46,7 @@ const Dashboard: React.FC = () => {
 
     // Call
     fetchCourses();
-  }, [user]);
+  }, [user, apiDomain]);
 
   // Only show logged in users
   if (loading) {
@@ -75,21 +75,24 @@ const Dashboard: React.FC = () => {
 
   // Add course function
   const addCourse = async () => {
+    // Get course name from input field
     const courseName = (
       document.getElementById("addCourseName") as HTMLInputElement
     ).value;
 
+    // Validation
     if (courseName === "") {
       setError("Course name cannot be empty");
       return;
     }
-
     if (courseName.length > 50) {
       setError("Course name cannot be longer than 50 characters");
       return;
     }
 
+    // Fetch
     try {
+      // Send request to add course
       const response = await fetch(`${apiDomain}/course/add-course`, {
         method: "POST",
         headers: {
@@ -99,19 +102,32 @@ const Dashboard: React.FC = () => {
         body: JSON.stringify({ courseName: courseName }),
       });
 
-      if (response.ok) {
-        const responseData = await response.json();
-        if (responseData.success) {
-          const courseData = responseData.data;
-          setCourses([...courses, courseData]);
-          console.log(typeof courseData);
-        } else {
-          setError(responseData.message);
-        }
-      } else {
+      // Bad response
+      if (!response.ok) {
         setError("Failed to add course");
       }
+
+      // Good response
+      const responseData = await response.json();
+      // Good response but course not added
+      if (response.status !== 200) {
+        // Course already exists
+        if (response.status === 409) {
+          setError("Course already exists");
+          return;
+        }
+        // Other error
+        setError("Failed to add course");
+        return;
+      }
+
+      // Course added successfully
+      const courseData = responseData.data;
+      setCourses([...courses, courseData]);
+      // Reload courses by redirecting to dashboard
+      window.location.href = "/dashboard";
     } catch (error) {
+      // Fetch error
       setError("Error adding course");
     }
   };

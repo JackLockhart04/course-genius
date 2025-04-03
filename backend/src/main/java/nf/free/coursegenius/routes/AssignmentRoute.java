@@ -1,7 +1,7 @@
 package nf.free.coursegenius.routes;
 
 import nf.free.coursegenius.dto.ResponseObject;
-import nf.free.coursegenius.exceptions.RouteException;
+import nf.free.coursegenius.exceptions.ApiException;
 import nf.free.coursegenius.dto.RequestContext;
 import nf.free.coursegenius.dto.Assignment;
 import nf.free.coursegenius.util.AssignmentUtil;
@@ -24,7 +24,7 @@ public class AssignmentRoute extends Route {
         String assignmentIdStr = ctx.getQueryStringParameters().get("assignmentId");
 
         if (assignmentIdStr == null) {
-            throw new RouteException("Missing assignmentId parameter", 400);
+            throw new ApiException("Missing assignmentId parameter", 400);
         }
 
         try {
@@ -38,9 +38,9 @@ public class AssignmentRoute extends Route {
                 response.addBody("message", "Assignment not found");
             }
         } catch (NumberFormatException e) {
-            throw new RouteException("Invalid assignmentId parameter", 400);
+            throw new ApiException("Invalid assignmentId parameter", 400);
         } catch (Exception e) {
-            throw new RuntimeException("Internal server error: " + e.getMessage());
+            throw new ApiException("Internal server error: " + e.getMessage(), 500);
         }
 
         return response;

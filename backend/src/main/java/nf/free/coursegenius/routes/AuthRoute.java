@@ -3,6 +3,7 @@ package nf.free.coursegenius.routes;
 import nf.free.coursegenius.config.AppConfig;
 import nf.free.coursegenius.dto.ResponseObject;
 import nf.free.coursegenius.dto.RequestContext;
+import nf.free.coursegenius.exceptions.ApiException;
 
 import com.microsoft.aad.msal4j.*;
 
@@ -23,12 +24,16 @@ public class AuthRoute extends Route {
     }
 
     // Build a ConfidentialClientApplication instance from the configuration
-    private ConfidentialClientApplication buildClientApp() throws Exception {
-        return ConfidentialClientApplication.builder(
-                AppConfig.clientId,
-                ClientCredentialFactory.createFromSecret(AppConfig.clientSecret))
-            .authority("https://login.microsoftonline.com/" + AppConfig.tenantId)
-            .build();
+    private ConfidentialClientApplication buildClientApp() {
+        try {
+            return ConfidentialClientApplication.builder(
+                    AppConfig.clientId,
+                    ClientCredentialFactory.createFromSecret(AppConfig.clientSecret))
+                .authority("https://login.microsoftonline.com/" + AppConfig.tenantId)
+                .build();
+        } catch (Exception e) {
+            throw new ApiException("Failed to create client application: " + e.getMessage(), 500);
+        }
     }
 
     public ResponseObject login(RequestContext ctx) {
@@ -59,13 +64,13 @@ public class AuthRoute extends Route {
             Cookie cookie = new Cookie("accessToken", result.accessToken());
             cookie.setPath("/");
             cookie.setHttpOnly(true);
-            cookie.setMaxAge(3 * 60 * 60); // 3 hours
+            cookie.setMaxAge(24 * 60 * 60); // 24 hours
             response.addCookie(cookie);
 
             // Redirect to the frontend application
             return response.redirect(AppConfig.webDomain);
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw new ApiException(e.getMessage(), 500);
         }
     }
 

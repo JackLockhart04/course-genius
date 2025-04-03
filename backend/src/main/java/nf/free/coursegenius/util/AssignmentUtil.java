@@ -2,6 +2,7 @@ package nf.free.coursegenius.util;
 
 import nf.free.coursegenius.config.AppConfig;
 import nf.free.coursegenius.dto.Assignment;
+import nf.free.coursegenius.exceptions.ApiException;
 
 import java.math.BigDecimal;
 import java.sql.Connection;
@@ -18,12 +19,16 @@ public class AssignmentUtil {
         try {
             Class.forName(AppConfig.dbDriverClassName);
         } catch (ClassNotFoundException e) {
-            throw new RuntimeException("Failed to load database driver", e);
+            throw new ApiException("Failed to load database driver", 500);
         }
     }
 
-    public static Connection getConnection() throws SQLException {
-        return DriverManager.getConnection(AppConfig.dbUrl, AppConfig.dbUsername, AppConfig.dbPassword);
+    public static Connection getConnection() {
+        try {
+            return DriverManager.getConnection(AppConfig.dbUrl, AppConfig.dbUsername, AppConfig.dbPassword);
+        } catch (SQLException e) {
+            throw new ApiException("Failed to connect to database", 500);
+        }
     }
 
     public static List<Assignment> getAssignmentsByCourseId(int courseId) {
@@ -38,7 +43,7 @@ public class AssignmentUtil {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new ApiException("Error fetching assignments: " + e.getMessage(), 500);
         }
         return assignments;
     }
@@ -54,18 +59,22 @@ public class AssignmentUtil {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new ApiException("Error fetching assignment: " + e.getMessage(), 500);
         }
-        return null;
+        throw new ApiException("Assignment not found", 404);
     }
 
-    private static Assignment mapResultSetToAssignment(ResultSet rs) throws SQLException {
-        int id = rs.getInt("id");
-        int courseId = rs.getInt("course_id");
-        String name = rs.getString("name");
-        BigDecimal weight = rs.getBigDecimal("weight");
-        BigDecimal grade = rs.getBigDecimal("grade");
+    private static Assignment mapResultSetToAssignment(ResultSet rs) {
+        try {
+            int id = rs.getInt("id");
+            int courseId = rs.getInt("course_id");
+            String name = rs.getString("name");
+            BigDecimal weight = rs.getBigDecimal("weight");
+            BigDecimal grade = rs.getBigDecimal("grade");
 
-        return new Assignment(id, courseId, name, weight, grade);
+            return new Assignment(id, courseId, name, weight, grade);
+        } catch (SQLException e) {
+            throw new ApiException("Error mapping result set to assignment: " + e.getMessage(), 500);
+        }
     }
 }

@@ -2,6 +2,7 @@ package nf.free.coursegenius.util;
 
 import java.util.HashMap;
 import java.util.Map;
+import nf.free.coursegenius.exceptions.ApiException;
 
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
@@ -11,7 +12,7 @@ public class TokenUtil {
     public static Map<String, Object> getUserDataFromToken(String token) {
         // Ensure token passed in
         if(token == null) {
-            throw new RuntimeException("Token is null");
+            throw new ApiException("Token is null", 400);
         }
         // Get the data from the token
         try {
@@ -21,7 +22,7 @@ public class TokenUtil {
             data.putAll(claimsSet.getClaims());
             return data;
         } catch (ParseException e) {
-            throw new RuntimeException("Error parsing token: " + e.getMessage());
+            throw new ApiException("Error parsing token: " + e.getMessage(), 500);
         }
     }
 }

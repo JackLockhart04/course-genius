@@ -2,6 +2,7 @@ package nf.free.coursegenius.util;
 
 import nf.free.coursegenius.config.AppConfig;
 import nf.free.coursegenius.dto.User;
+import nf.free.coursegenius.exceptions.ApiException;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -17,32 +18,43 @@ public class UserUtil {
         try {
             Class.forName(AppConfig.dbDriverClassName);
         } catch (ClassNotFoundException e) {
-            throw new RuntimeException("Failed to load database driver", e);
+            throw new ApiException("Failed to load database driver", 500);
         }
     }
 
-    public static Connection getConnection() throws SQLException {
-        return DriverManager.getConnection(AppConfig.dbUrl, AppConfig.dbUsername, AppConfig.dbPassword);
+    public static Connection getConnection() {
+        try {
+            return DriverManager.getConnection(AppConfig.dbUrl, AppConfig.dbUsername, AppConfig.dbPassword);
+        } catch (SQLException e) {
+            throw new ApiException("Failed to connect to database", 500);
+        }
     }
 
     public static String getUserOidByAccessToken(String accessToken){
         if (accessToken == null || accessToken.isEmpty()) {
-            throw new RuntimeException("Access token cannot be null or empty");
+            throw new ApiException("Access token cannot be null or empty", 400);
         }
         // Get user data from token
         Map<String, Object> userData = TokenUtil.getUserDataFromToken(accessToken);
         if (userData == null || userData.isEmpty()) {
-            throw new RuntimeException("Invalid access token");
+            throw new ApiException("Invalid access token", 500);
         }
         // Get user ID from token data
-        String userOid = userData.get("oid").toString();
+        Object userOidObj = userData.get("oid");
+        if (userOidObj == null) {
+            throw new ApiException("User ID not found in token data", 400);
+        }
+        String userOid = userOidObj.toString();
+        if (userOid == null || userOid.isEmpty()) {
+            throw new ApiException("User ID cannot be null or empty", 400);
+        }
         
         return userOid;
     }
 
     public static User getUserByOid(String oid) {
         if (oid == null || oid.isEmpty()) {
-            throw new IllegalArgumentException("User ID cannot be null or empty");
+            throw new ApiException("User ID cannot be null or empty", 400);
         }
         // Get user
         String sql = "SELECT * FROM user WHERE oid = ?";
@@ -55,9 +67,11 @@ public class UserUtil {
                 }
             }
         } catch (SQLException e) {
-            throw new RuntimeException("Error getting user by oid", e);
+            throw new ApiException("Error getting user by oid", 500);
         }
-        return null;
+        
+        // User not found
+        throw new ApiException("User not found", 404);
     }
 
     public static User mapToToUser(Map<String, String> userMap) {
@@ -69,13 +83,17 @@ public class UserUtil {
         return new User(id, oid, username, email);
     }
 
-    private static User resultSetToUser(ResultSet rs) throws SQLException {
-        int id = rs.getInt("id");
-        String oid = rs.getString("oid");
-        String username = rs.getString("username");
-        String email = rs.getString("email");
+    private static User resultSetToUser(ResultSet rs) {
+        try {
+            int id = rs.getInt("id");
+            String oid = rs.getString("oid");
+            String username = rs.getString("username");
+            String email = rs.getString("email");
 
-        return new User(id, oid, username, email);
+            return new User(id, oid, username, email);
+        } catch (SQLException e) {
+            throw new ApiException("Error mapping ResultSet to User", 500);
+        }
     }
 
     // private Map<String, Object> resultSetToMap(ResultSet rs) throws SQLException {

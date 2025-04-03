@@ -3,7 +3,7 @@ package nf.free.coursegenius;
 import nf.free.coursegenius.routes.*;
 import nf.free.coursegenius.dto.ResponseObject;
 import nf.free.coursegenius.dto.RequestContext;
-import nf.free.coursegenius.exceptions.RouteException;
+import nf.free.coursegenius.exceptions.ApiException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -34,8 +34,8 @@ public class App {
                 Route route = routes.get(path[0]);
                 return route.handle(ctx);
             }
-            throw new RouteException("Route not found", 404);
-        } catch (RouteException e) {
+            throw new ApiException("Route not found", 404);
+        } catch (ApiException e) {
             // Log any errors
             System.out.println(e.getMessage());
             ResponseObject response = new ResponseObject();
