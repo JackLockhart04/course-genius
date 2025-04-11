@@ -55,6 +55,30 @@ const Course: React.FC = () => {
     fetchCourse();
   }, [courseId]);
 
+  // Add course handler
+  const addAssignment = async () => {
+    try {
+      const response = await fetch(`${apiDomain}/assignment/add-assignment`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include", // Include cookies in the request
+        body: JSON.stringify({ courseId }),
+      });
+
+      if (response.ok) {
+        // Redirect to dashboard
+        window.location.href = "/dashboard";
+      } else {
+        const errorData = await response.json();
+        setError(errorData.message || "Failed to add assignment");
+      }
+    } catch (error) {
+      setError("Error adding assignment");
+    }
+  };
+
   // Delete course handler
   const deleteCourse = async () => {
     try {
@@ -107,9 +131,24 @@ const Course: React.FC = () => {
       ) : (
         <p>No assignments found</p>
       )}
-      <button className="deleteButton" onClick={deleteCourse}>
+      <div className="assignmentRow" id="addAssignment">
+        <input
+          id="addAssignmentName"
+          type="text"
+          placeholder="Assignment name"
+        />
+        <input
+          id="addAssignmentWeight"
+          type="number"
+          placeholder="Weight (%)"
+        />
+        <input id="addAssignmentGrade" type="number" placeholder="Grade (%)" />
+        <button onClick={addAssignment}>Add Assignment</button>
+      </div>
+      <button onClick={deleteCourse} className="deleteCourseButton">
         Delete Course
       </button>
+      {error && <div className="error">{error}</div>}
     </div>
   );
 };

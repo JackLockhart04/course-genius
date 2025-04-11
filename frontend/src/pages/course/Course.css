@@ -27,10 +27,36 @@
 
 .assignmentItem {
   font-size: 1.2em;
-  color: inherit; /* Inherit color from parent */
-  text-decoration: none; /* Remove underline */
+  color: inherit;
+  text-decoration: none;
 }
 
 .assignmentItem:hover {
-  text-decoration: underline; /* Optional: Add underline on hover */
+  text-decoration: underline;
+}
+
+.message {
+  font-size: 1.2em;
+}
+
+.error {
+  color: red;
+  font-size: 1.2em;
+}
+
+.deleteCourseButton {
+  padding: 10px 20px;
+  font-size: 1rem;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  margin: 10px;
+  background-color: #f44336; /* Red background */
+  color: white; /* White text */
+}
+
+.deleteCourseButton:hover {
+  background-color: #d32f2f; /* Darker red on hover */
+  transform: scale(1.05); /* Slightly enlarge on hover */
 }

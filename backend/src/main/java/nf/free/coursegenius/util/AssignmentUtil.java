@@ -31,6 +31,20 @@ public class AssignmentUtil {
         }
     }
 
+    public static void addAssignment(int courseId, String name, double grade, double weight) {
+        String sql = "INSERT INTO assignment (course_id, name, grade, weight) VALUES (?, ?, ?, ?)";
+        try (Connection conn = getConnection();
+             PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setInt(1, courseId);
+            statement.setString(2, name);
+            statement.setDouble(3, grade);
+            statement.setDouble(4, weight);
+            statement.executeUpdate();
+        } catch (SQLException e) {
+            throw new ApiException("Error adding assignment: " + e.getMessage(), 500);
+        }
+    }
+
     public static List<Assignment> getAssignmentsByCourseId(int courseId) {
         String sql = "SELECT * FROM assignment WHERE course_id = ?";
         List<Assignment> assignments = new ArrayList<>();

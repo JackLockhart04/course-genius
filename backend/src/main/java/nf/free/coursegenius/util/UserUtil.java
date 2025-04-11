@@ -74,6 +74,48 @@ public class UserUtil {
         throw new ApiException("User not found", 404);
     }
 
+    public static boolean checkCourseIdExists(String userOid, int courseId) {
+        if (userOid == null || userOid.isEmpty()) {
+            throw new ApiException("User ID cannot be null or empty", 400);
+        }
+        if(courseId < 0) {
+            throw new ApiException("Invalid course ID", 400);
+        }
+        // Check if course ID exists and belongs to user
+        String sql = "SELECT * FROM course WHERE id = ? AND user_id = (SELECT id FROM user WHERE oid = ?)";
+        try (Connection conn = getConnection();
+             PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setInt(1, courseId);
+            statement.setString(2, userOid);
+            try (ResultSet rs = statement.executeQuery()) {
+                return rs.next();
+            }
+        } catch (SQLException e) {
+            throw new ApiException("Error checking course ID existence", 500);
+        }
+    }
+
+    public static boolean checkAssignmentIdExists(String userOid, int assignmentId){
+        if (userOid == null || userOid.isEmpty()) {
+            throw new ApiException("User ID cannot be null or empty", 400);
+        }
+        if(assignmentId < 0) {
+            throw new ApiException("Invalid assignment ID", 400);
+        }
+        // Check if assignment ID exists and belongs to user
+        String sql = "SELECT * FROM assignment WHERE id = ? AND course_id = (SELECT id FROM course WHERE user_id = (SELECT id FROM user WHERE oid = ?))";
+        try (Connection conn = getConnection();
+             PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setInt(1, assignmentId);
+            statement.setString(2, userOid);
+            try (ResultSet rs = statement.executeQuery()) {
+                return rs.next();
+            }
+        } catch (SQLException e) {
+            throw new ApiException("Error checking assignment ID existence", 500);
+        }
+    }
+
     public static User mapToToUser(Map<String, String> userMap) {
         int id = Integer.parseInt(userMap.get("id"));
         String oid = userMap.get("oid");
