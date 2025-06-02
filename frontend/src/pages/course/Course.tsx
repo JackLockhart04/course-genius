@@ -10,10 +10,20 @@ interface Assignment {
   grade: number | null;
 }
 
-interface Course {
+interface AssignmentGroup {
   id: number;
   name: string;
+  weight: number;
   assignments: Assignment[];
+}
+
+interface Course {
+  id: number;
+  userId: number;
+  name: string;
+  creditHours: number;
+  gpa: number;
+  assignmentGroups: AssignmentGroup[];
 }
 
 const Course: React.FC = () => {
@@ -55,27 +65,39 @@ const Course: React.FC = () => {
     fetchCourse();
   }, [courseId]);
 
-  // Add course handler
-  const addAssignment = async () => {
+  // Add assignment group handler
+  const addAssignmentGroup = async () => {
+    const groupName = (document.getElementById("addGroupName") as HTMLInputElement).value;
+    const groupWeight = (document.getElementById("addGroupWeight") as HTMLInputElement).value;
+
+    if (!groupName || !groupWeight) {
+      setError("Please fill in all fields");
+      return;
+    }
+
     try {
-      const response = await fetch(`${apiDomain}/assignment/add-assignment`, {
+      const response = await fetch(`${apiDomain}/assignment-group/add-group`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        credentials: "include", // Include cookies in the request
-        body: JSON.stringify({ courseId }),
+        credentials: "include",
+        body: JSON.stringify({
+          courseId,
+          groupName,
+          weight: Number(groupWeight)
+        }),
       });
 
       if (response.ok) {
-        // Redirect to dashboard
-        window.location.href = "/dashboard";
+        // Refresh the course data
+        window.location.reload();
       } else {
         const errorData = await response.json();
-        setError(errorData.message || "Failed to add assignment");
+        setError(errorData.message || "Failed to add assignment group");
       }
     } catch (error) {
-      setError("Error adding assignment");
+      setError("Error adding assignment group");
     }
   };
 
@@ -87,7 +109,7 @@ const Course: React.FC = () => {
         headers: {
           "Content-Type": "application/json",
         },
-        credentials: "include", // Include cookies in the request
+        credentials: "include",
         body: JSON.stringify({ courseId }),
       });
 
@@ -113,38 +135,53 @@ const Course: React.FC = () => {
 
   return (
     <div className="courseContainer">
-      <h1>Course ID: {course.id}</h1>
-      <h2>Course Name: {course.name}</h2>
-      <h3>Assignments:</h3>
-      {course.assignments.length > 0 ? (
-        course.assignments.map((assignment) => (
-          <div key={assignment.id} className="assignmentRow">
-            <Link
-              to={`/assignment/${assignment.id}`}
-              className="assignmentItem"
-            >
-              {assignment.name}, Weight: {assignment.weight}%, Grade:{" "}
-              {assignment.grade ?? "N/A"}
-            </Link>
+      <h1>{course.name}</h1>
+      <div className="courseInfo">
+        <p>Credit Hours: {course.creditHours}</p>
+        <p>GPA: {course.gpa ? course.gpa.toFixed(2) : 'N/A'}</p>
+      </div>
+
+      <h2>Assignment Groups</h2>
+      {course.assignmentGroups.length > 0 ? (
+        course.assignmentGroups.map((group) => (
+          <div key={group.id} className="assignmentGroup">
+            <h3>{group.name} ({group.weight}%)</h3>
+            {group.assignments.length > 0 ? (
+              group.assignments.map((assignment) => (
+                <div key={assignment.id} className="assignmentRow">
+                  <Link to={`/assignment/${assignment.id}`} className="assignmentItem">
+                    {assignment.name} - Weight: {assignment.weight}%, Grade: {assignment.grade ?? "N/A"}
+                  </Link>
+                </div>
+              ))
+            ) : (
+              <p>No assignments in this group</p>
+            )}
           </div>
         ))
       ) : (
-        <p>No assignments found</p>
+        <p>No assignment groups found</p>
       )}
-      <div className="assignmentRow" id="addAssignment">
-        <input
-          id="addAssignmentName"
-          type="text"
-          placeholder="Assignment name"
-        />
-        <input
-          id="addAssignmentWeight"
-          type="number"
-          placeholder="Weight (%)"
-        />
-        <input id="addAssignmentGrade" type="number" placeholder="Grade (%)" />
-        <button onClick={addAssignment}>Add Assignment</button>
+
+      <div className="addGroupSection">
+        <h3>Add Assignment Group</h3>
+        <div className="inputGroup">
+          <input
+            id="addGroupName"
+            type="text"
+            placeholder="Group name"
+          />
+          <input
+            id="addGroupWeight"
+            type="number"
+            placeholder="Weight (%)"
+            min="0"
+            max="100"
+          />
+          <button onClick={addAssignmentGroup}>Add Group</button>
+        </div>
       </div>
+
       <button onClick={deleteCourse} className="deleteCourseButton">
         Delete Course
       </button>

@@ -5,7 +5,25 @@ import "./Dashboard.css";
 
 interface Course {
   id: number;
+  userId: number;
   name: string;
+  creditHours: number;
+  gpa: number;
+  assignmentGroups: AssignmentGroup[];
+}
+
+interface AssignmentGroup {
+  id: number;
+  name: string;
+  weight: number;
+  assignments: Assignment[];
+}
+
+interface Assignment {
+  id: number;
+  name: string;
+  weight: number;
+  grade: number | null;
 }
 
 const Dashboard: React.FC = () => {
@@ -79,6 +97,9 @@ const Dashboard: React.FC = () => {
     const courseName = (
       document.getElementById("addCourseName") as HTMLInputElement
     ).value;
+    const creditHours = (
+      document.getElementById("addCourseCreditHours") as HTMLInputElement
+    ).value;
 
     // Validation
     if (courseName === "") {
@@ -87,6 +108,10 @@ const Dashboard: React.FC = () => {
     }
     if (courseName.length > 50) {
       setError("Course name cannot be longer than 50 characters");
+      return;
+    }
+    if (!creditHours || isNaN(Number(creditHours)) || Number(creditHours) <= 0) {
+      setError("Credit hours must be a positive number");
       return;
     }
 
@@ -99,7 +124,10 @@ const Dashboard: React.FC = () => {
           "Content-Type": "application/json",
         },
         credentials: "include",
-        body: JSON.stringify({ courseName: courseName }),
+        body: JSON.stringify({ 
+          courseName: courseName,
+          creditHours: Number(creditHours)
+        }),
       });
 
       // Bad response
@@ -138,12 +166,18 @@ const Dashboard: React.FC = () => {
       {courses.map((course) => (
         <div key={course.id} className="courseRow">
           <Link to={`/course/${course.id}`} className="courseItem">
-            {course.name}, id: {course.id}
+            <div className="courseInfo">
+              <h3>{course.name}</h3>
+              <p>Credit Hours: {course.creditHours}</p>
+              <p>GPA: {course.gpa ? course.gpa.toFixed(2) : 'N/A'}</p>
+              <p>Assignment Groups: {course.assignmentGroups.length}</p>
+            </div>
           </Link>
         </div>
       ))}
       <div className="courseRow" id="addCourse">
         <input id="addCourseName" type="text" placeholder="Course name" />
+        <input id="addCourseCreditHours" type="number" placeholder="Credit hours" min="0" step="0.5" />
         <button onClick={addCourse}>Add course</button>
       </div>
       {error && <div className="error">{error}</div>}
