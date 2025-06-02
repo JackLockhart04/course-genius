@@ -4,22 +4,24 @@ import java.math.BigDecimal;
 
 public class Assignment {
     private int id;
-    private int courseId;
+    private int assignmentGroupId;
     private String name;
-    private BigDecimal weight;
-    private BigDecimal grade;
+    private BigDecimal pointsEarned;
+    private BigDecimal pointsPossible;
+    private BigDecimal percentageGrade;
 
     // Default constructor
     public Assignment() {
     }
 
     // Parameterized constructor
-    public Assignment(int id, int courseId, String name, BigDecimal weight, BigDecimal grade) {
+    public Assignment(int id, int assignmentGroupId, String name, BigDecimal pointsEarned, BigDecimal pointsPossible, BigDecimal percentageGrade) {
         this.id = id;
-        this.courseId = courseId;
+        this.assignmentGroupId = assignmentGroupId;
         this.name = name;
-        this.weight = weight;
-        this.grade = grade;
+        this.pointsEarned = pointsEarned;
+        this.pointsPossible = pointsPossible;
+        this.percentageGrade = percentageGrade;
     }
 
     // Getters and setters
@@ -31,12 +33,12 @@ public class Assignment {
         this.id = id;
     }
 
-    public int getCourseId() {
-        return courseId;
+    public int getAssignmentGroupId() {
+        return assignmentGroupId;
     }
 
-    public void setCourseId(int courseId) {
-        this.courseId = courseId;
+    public void setAssignmentGroupId(int assignmentGroupId) {
+        this.assignmentGroupId = assignmentGroupId;
     }
 
     public String getName() {
@@ -47,30 +49,39 @@ public class Assignment {
         this.name = name;
     }
 
-    public BigDecimal getWeight() {
-        return weight;
+    public BigDecimal getPointsEarned() {
+        return pointsEarned;
     }
 
-    public void setWeight(BigDecimal weight) {
-        this.weight = weight;
+    public void setPointsEarned(BigDecimal pointsEarned) {
+        this.pointsEarned = pointsEarned;
     }
 
-    public BigDecimal getGrade() {
-        return grade;
+    public BigDecimal getPointsPossible() {
+        return pointsPossible;
     }
 
-    public void setGrade(BigDecimal grade) {
-        this.grade = grade;
+    public void setPointsPossible(BigDecimal pointsPossible) {
+        this.pointsPossible = pointsPossible;
+    }
+
+    public BigDecimal getPercentageGrade() {
+        return percentageGrade;
+    }
+
+    public void setPercentageGrade(BigDecimal percentageGrade) {
+        this.percentageGrade = percentageGrade;
     }
 
     @Override
     public String toString() {
         return "Assignment{" +
                 "id=" + id +
-                ", courseId=" + courseId +
+                ", assignmentGroupId=" + assignmentGroupId +
                 ", name='" + name + '\'' +
-                ", weight=" + weight +
-                ", grade=" + grade +
+                ", pointsEarned=" + pointsEarned +
+                ", pointsPossible=" + pointsPossible +
+                ", percentageGrade=" + percentageGrade +
                 '}';
     }
 }

@@ -4,9 +4,13 @@ import nf.free.coursegenius.dto.ResponseObject;
 import nf.free.coursegenius.exceptions.ApiException;
 import nf.free.coursegenius.dto.RequestContext;
 import nf.free.coursegenius.dto.Assignment;
+import nf.free.coursegenius.dto.AssignmentGroup;
 import nf.free.coursegenius.util.AssignmentUtil;
 // import nf.free.coursegenius.util.TokenUtil;
 import nf.free.coursegenius.util.UserUtil;
+
+import java.math.BigDecimal;
+import java.util.List;
 
 public class AssignmentRoute extends Route {
     public AssignmentRoute() {
@@ -18,14 +22,22 @@ public class AssignmentRoute extends Route {
     }
 
     public void registerRoutes() {
+        registerHandler("/add-assignment-group", "POST", this::addAssignmentGroup);
         registerHandler("/add-assignment", "POST", this::addAssignment);
         registerHandler("/get-assignment", "GET", this::getAssignmentById);
+        registerHandler("/get-assignment-groups", "GET", this::getAssignmentGroupsByCourseId);
+        registerHandler("/update-assignment", "POST", this::updateAssignment);
+        registerHandler("/delete-assignment", "POST", this::deleteAssignment);
     }
 
-    public ResponseObject addAssignment(RequestContext ctx){
+    public ResponseObject addAssignmentGroup(RequestContext ctx) {
         ResponseObject response = new ResponseObject();
+        
         // Get user access token from cookies
         String userAccessToken = ctx.getCookie("accessToken");
+        if (userAccessToken == null) {
+            throw new ApiException("No access token given, not logged in", 401);
+        }
 
         // Get userOid from access token
         String userOid = UserUtil.getUserOidByAccessToken(userAccessToken);
@@ -35,70 +47,128 @@ public class AssignmentRoute extends Route {
         if (courseIdObj == null) {
             throw new ApiException("Missing courseId parameter", 400);
         }
-        String courseId = courseIdObj.toString();
-        if (courseId == null || courseId.isEmpty()) {
-            throw new ApiException("Something went wrong with courseId parameter", 400);
-        }
-        int courseIdInt;
+        int courseId;
         try {
-            courseIdInt = Integer.parseInt(courseId);
+            courseId = Integer.parseInt(courseIdObj.toString());
+            if (courseId <= 0) {
+                throw new ApiException("Invalid course ID", 400);
+            }
         } catch (NumberFormatException e) {
-            throw new ApiException("Invalid courseId parameter", 400);
+            throw new ApiException("Invalid courseId format", 400);
         }
+
         // Check courseID exists and belongs to user
-        if (!UserUtil.checkCourseIdExists(userOid, courseIdInt)) {
+        if (!UserUtil.checkCourseIdExists(userOid, courseId)) {
             throw new ApiException("Course ID does not exist or does not belong to user", 400);
         }
 
-        // Get assignmentName from request body
+        // Get group name from request body
+        Object groupNameObj = ctx.getBody().get("groupName");
+        if (groupNameObj == null) {
+            throw new ApiException("Missing groupName parameter", 400);
+        }
+        String groupName = groupNameObj.toString();
+        if (groupName.isEmpty()) {
+            throw new ApiException("Group name cannot be empty", 400);
+        }
+
+        // Get weight from request body
+        Object weightObj = ctx.getBody().get("weight");
+        if (weightObj == null) {
+            throw new ApiException("Missing weight parameter", 400);
+        }
+        BigDecimal weight;
+        try {
+            weight = new BigDecimal(weightObj.toString());
+            if (weight.compareTo(BigDecimal.ZERO) <= 0 || weight.compareTo(BigDecimal.ONE) > 0) {
+                throw new ApiException("Weight must be between 0 and 1", 400);
+            }
+        } catch (NumberFormatException e) {
+            throw new ApiException("Invalid weight format", 400);
+        }
+
+        // Add assignment group
+        AssignmentUtil.addAssignmentGroup(courseId, groupName, weight);
+
+        // Return success response
+        response.setStatusCode(200);
+        response.addBody("message", "Assignment group added successfully");
+        return response;
+    }
+
+    public ResponseObject addAssignment(RequestContext ctx) {
+        ResponseObject response = new ResponseObject();
+        
+        // Get user access token from cookies
+        String userAccessToken = ctx.getCookie("accessToken");
+        if (userAccessToken == null) {
+            throw new ApiException("No access token given, not logged in", 401);
+        }
+
+        // Get userOid from access token
+        String userOid = UserUtil.getUserOidByAccessToken(userAccessToken);
+
+        // Get assignmentGroupId from request body
+        Object groupIdObj = ctx.getBody().get("assignmentGroupId");
+        if (groupIdObj == null) {
+            throw new ApiException("Missing assignmentGroupId parameter", 400);
+        }
+        int groupId;
+        try {
+            groupId = Integer.parseInt(groupIdObj.toString());
+            if (groupId <= 0) {
+                throw new ApiException("Invalid assignment group ID", 400);
+            }
+        } catch (NumberFormatException e) {
+            throw new ApiException("Invalid assignmentGroupId format", 400);
+        }
+
+        // Get assignment name from request body
         Object assignmentNameObj = ctx.getBody().get("assignmentName");
         if (assignmentNameObj == null) {
             throw new ApiException("Missing assignmentName parameter", 400);
         }
         String assignmentName = assignmentNameObj.toString();
-        if (assignmentName == null || assignmentName.isEmpty()) {
-            throw new ApiException("Something went wrong with assignmentName parameter", 400);
+        if (assignmentName.isEmpty()) {
+            throw new ApiException("Assignment name cannot be empty", 400);
         }
 
-        // Get grade from request body
-        double grade = 0;
-        Object gradeObj = ctx.getBody().get("assignmentGrade");
-        if (gradeObj != null) {
-            String gradeStr = gradeObj.toString();
-            if (gradeStr == null || gradeStr.isEmpty()) {
-                throw new ApiException("Something went wrong with grade parameter", 400);
+        // Get points earned from request body
+        Object pointsEarnedObj = ctx.getBody().get("pointsEarned");
+        if (pointsEarnedObj == null) {
+            throw new ApiException("Missing pointsEarned parameter", 400);
+        }
+        BigDecimal pointsEarned;
+        try {
+            pointsEarned = new BigDecimal(pointsEarnedObj.toString());
+            if (pointsEarned.compareTo(BigDecimal.ZERO) < 0) {
+                throw new ApiException("Points earned cannot be negative", 400);
             }
-            try {
-                grade = Double.parseDouble(gradeStr);
-            } catch (NumberFormatException e) {
-                throw new ApiException("Invalid grade parameter", 400);
-            }
-            if (grade < 0 || grade > 100) {
-                throw new ApiException("Grade must be between 0 and 100", 400);
-            }
+        } catch (NumberFormatException e) {
+            throw new ApiException("Invalid pointsEarned format", 400);
         }
 
-        // Get weight from request body
-        double weight = 0;
-        Object weightObj = ctx.getBody().get("assignmentWeight");
-        if (weightObj != null) {
-            String weightStr = weightObj.toString();
-            if (weightStr == null || weightStr.isEmpty()) {
-                throw new ApiException("Something went wrong with weight parameter", 400);
+        // Get points possible from request body
+        Object pointsPossibleObj = ctx.getBody().get("pointsPossible");
+        if (pointsPossibleObj == null) {
+            throw new ApiException("Missing pointsPossible parameter", 400);
+        }
+        BigDecimal pointsPossible;
+        try {
+            pointsPossible = new BigDecimal(pointsPossibleObj.toString());
+            if (pointsPossible.compareTo(BigDecimal.ZERO) <= 0) {
+                throw new ApiException("Points possible must be greater than 0", 400);
             }
-            try {
-                weight = Double.parseDouble(weightStr);
-            } catch (NumberFormatException e) {
-                throw new ApiException("Invalid weight parameter", 400);
-            }
-            if (weight < 0 || weight > 1) {
-                throw new ApiException("Weight must be between 0 and 1", 400);
-            }
+        } catch (NumberFormatException e) {
+            throw new ApiException("Invalid pointsPossible format", 400);
         }
 
+        if (pointsEarned.compareTo(pointsPossible) > 0) {
+            throw new ApiException("Points earned cannot be greater than points possible", 400);
+        }
 
-        // Add assignment - AssignmentUtil handles errors
-        AssignmentUtil.addAssignment(courseIdInt, assignmentName, grade, weight);
+        // Add assignment
+        AssignmentUtil.addAssignment(groupId, assignmentName, pointsEarned, pointsPossible);
 
         // Return success response
         response.setStatusCode(200);
@@ -106,16 +176,29 @@ public class AssignmentRoute extends Route {
         return response;
     }
 
-    public ResponseObject getAssignmentById(RequestContext ctx) { // FIXME add authorization
+    public ResponseObject getAssignmentById(RequestContext ctx) {
         ResponseObject response = new ResponseObject();
-        String assignmentIdStr = ctx.getQueryStringParameters().get("assignmentId");
+        
+        // Get user access token from cookies
+        String userAccessToken = ctx.getCookie("accessToken");
+        if (userAccessToken == null) {
+            throw new ApiException("No access token given, not logged in", 401);
+        }
 
+        // Get userOid from access token
+        String userOid = UserUtil.getUserOidByAccessToken(userAccessToken);
+
+        String assignmentIdStr = ctx.getQueryStringParameters().get("assignmentId");
         if (assignmentIdStr == null) {
             throw new ApiException("Missing assignmentId parameter", 400);
         }
 
         try {
             int assignmentId = Integer.parseInt(assignmentIdStr);
+            if (assignmentId <= 0) {
+                throw new ApiException("Invalid assignment ID", 400);
+            }
+
             Assignment assignment = AssignmentUtil.getAssignmentById(assignmentId);
             if (assignment != null) {
                 response.setStatusCode(200);
@@ -125,11 +208,153 @@ public class AssignmentRoute extends Route {
                 response.addBody("message", "Assignment not found");
             }
         } catch (NumberFormatException e) {
-            throw new ApiException("Invalid assignmentId parameter", 400);
-        } catch (Exception e) {
-            throw new ApiException("Internal server error: " + e.getMessage(), 500);
+            throw new ApiException("Invalid assignmentId format", 400);
         }
 
+        return response;
+    }
+
+    public ResponseObject getAssignmentGroupsByCourseId(RequestContext ctx) {
+        ResponseObject response = new ResponseObject();
+        
+        // Get user access token from cookies
+        String userAccessToken = ctx.getCookie("accessToken");
+        if (userAccessToken == null) {
+            throw new ApiException("No access token given, not logged in", 401);
+        }
+
+        // Get userOid from access token
+        String userOid = UserUtil.getUserOidByAccessToken(userAccessToken);
+
+        String courseIdStr = ctx.getQueryStringParameters().get("courseId");
+        if (courseIdStr == null) {
+            throw new ApiException("Missing courseId parameter", 400);
+        }
+
+        try {
+            int courseId = Integer.parseInt(courseIdStr);
+            if (courseId <= 0) {
+                throw new ApiException("Invalid course ID", 400);
+            }
+
+            // Check courseID exists and belongs to user
+            if (!UserUtil.checkCourseIdExists(userOid, courseId)) {
+                throw new ApiException("Course ID does not exist or does not belong to user", 400);
+            }
+
+            List<AssignmentGroup> groups = AssignmentUtil.getAssignmentGroupsByCourseId(courseId);
+            response.setStatusCode(200);
+            response.addBody("assignmentGroups", groups);
+        } catch (NumberFormatException e) {
+            throw new ApiException("Invalid courseId format", 400);
+        }
+
+        return response;
+    }
+
+    public ResponseObject updateAssignment(RequestContext ctx) {
+        ResponseObject response = new ResponseObject();
+        
+        // Get user access token from cookies
+        String userAccessToken = ctx.getCookie("accessToken");
+        if (userAccessToken == null) {
+            throw new ApiException("No access token given, not logged in", 401);
+        }
+
+        // Get userOid from access token
+        String userOid = UserUtil.getUserOidByAccessToken(userAccessToken);
+
+        // Get assignmentId from request body
+        Object assignmentIdObj = ctx.getBody().get("assignmentId");
+        if (assignmentIdObj == null) {
+            throw new ApiException("Missing assignmentId parameter", 400);
+        }
+        int assignmentId;
+        try {
+            assignmentId = Integer.parseInt(assignmentIdObj.toString());
+            if (assignmentId <= 0) {
+                throw new ApiException("Invalid assignment ID", 400);
+            }
+        } catch (NumberFormatException e) {
+            throw new ApiException("Invalid assignmentId format", 400);
+        }
+
+        // Get points earned from request body
+        Object pointsEarnedObj = ctx.getBody().get("pointsEarned");
+        if (pointsEarnedObj == null) {
+            throw new ApiException("Missing pointsEarned parameter", 400);
+        }
+        BigDecimal pointsEarned;
+        try {
+            pointsEarned = new BigDecimal(pointsEarnedObj.toString());
+            if (pointsEarned.compareTo(BigDecimal.ZERO) < 0) {
+                throw new ApiException("Points earned cannot be negative", 400);
+            }
+        } catch (NumberFormatException e) {
+            throw new ApiException("Invalid pointsEarned format", 400);
+        }
+
+        // Get points possible from request body
+        Object pointsPossibleObj = ctx.getBody().get("pointsPossible");
+        if (pointsPossibleObj == null) {
+            throw new ApiException("Missing pointsPossible parameter", 400);
+        }
+        BigDecimal pointsPossible;
+        try {
+            pointsPossible = new BigDecimal(pointsPossibleObj.toString());
+            if (pointsPossible.compareTo(BigDecimal.ZERO) <= 0) {
+                throw new ApiException("Points possible must be greater than 0", 400);
+            }
+        } catch (NumberFormatException e) {
+            throw new ApiException("Invalid pointsPossible format", 400);
+        }
+
+        if (pointsEarned.compareTo(pointsPossible) > 0) {
+            throw new ApiException("Points earned cannot be greater than points possible", 400);
+        }
+
+        // Update assignment
+        AssignmentUtil.updateAssignment(assignmentId, pointsEarned, pointsPossible);
+
+        // Return success response
+        response.setStatusCode(200);
+        response.addBody("message", "Assignment updated successfully");
+        return response;
+    }
+
+    public ResponseObject deleteAssignment(RequestContext ctx) {
+        ResponseObject response = new ResponseObject();
+        
+        // Get user access token from cookies
+        String userAccessToken = ctx.getCookie("accessToken");
+        if (userAccessToken == null) {
+            throw new ApiException("No access token given, not logged in", 401);
+        }
+
+        // Get userOid from access token
+        String userOid = UserUtil.getUserOidByAccessToken(userAccessToken);
+
+        // Get assignmentId from request body
+        Object assignmentIdObj = ctx.getBody().get("assignmentId");
+        if (assignmentIdObj == null) {
+            throw new ApiException("Missing assignmentId parameter", 400);
+        }
+        int assignmentId;
+        try {
+            assignmentId = Integer.parseInt(assignmentIdObj.toString());
+            if (assignmentId <= 0) {
+                throw new ApiException("Invalid assignment ID", 400);
+            }
+        } catch (NumberFormatException e) {
+            throw new ApiException("Invalid assignmentId format", 400);
+        }
+
+        // Delete assignment
+        AssignmentUtil.deleteAssignment(assignmentId);
+
+        // Return success response
+        response.setStatusCode(200);
+        response.addBody("message", "Assignment deleted successfully");
         return response;
     }
 }

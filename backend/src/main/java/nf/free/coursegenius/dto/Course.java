@@ -1,5 +1,6 @@
 package nf.free.coursegenius.dto;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.ArrayList;
 
@@ -7,24 +8,23 @@ public class Course {
     private int id;
     private int userId;
     private String name;
-    private List<Assignment> assignments;
+    private BigDecimal creditHours;
+    private BigDecimal gpa;
+    private List<AssignmentGroup> assignmentGroups;
 
     // Default constructor
     public Course() {
+        this.assignmentGroups = new ArrayList<>();
     }
 
     // Parameterized constructor
-    public Course(int id, int userId, String name) {
+    public Course(int id, int userId, String name, BigDecimal creditHours, BigDecimal gpa, List<AssignmentGroup> assignmentGroups) {
         this.id = id;
         this.userId = userId;
         this.name = name;
-        this.assignments = new ArrayList<>();
-    }
-    public Course(int id, int userId, String name, List<Assignment> assignments) {
-        this.id = id;
-        this.userId = userId;
-        this.name = name;
-        this.assignments = assignments;
+        this.creditHours = creditHours;
+        this.gpa = gpa;
+        this.assignmentGroups = assignmentGroups != null ? assignmentGroups : new ArrayList<>();
     }
 
     // Getters and setters
@@ -52,16 +52,35 @@ public class Course {
         this.name = name;
     }
 
-    public List<Assignment> getAssignments() {
-        return assignments;
+    public BigDecimal getCreditHours() {
+        return creditHours;
     }
 
-    public void setAssignments(List<Assignment> assignments) {
-        this.assignments = assignments;
+    public void setCreditHours(BigDecimal creditHours) {
+        this.creditHours = creditHours;
     }
 
-    public void addAssignment(Assignment assignment) {
-        this.assignments.add(assignment);
+    public BigDecimal getGpa() {
+        return gpa;
+    }
+
+    public void setGpa(BigDecimal gpa) {
+        this.gpa = gpa;
+    }
+
+    public List<AssignmentGroup> getAssignmentGroups() {
+        return assignmentGroups;
+    }
+
+    public void setAssignmentGroups(List<AssignmentGroup> assignmentGroups) {
+        this.assignmentGroups = assignmentGroups;
+    }
+
+    public void addAssignmentGroup(AssignmentGroup group) {
+        if (assignmentGroups == null) {
+            assignmentGroups = new ArrayList<>();
+        }
+        assignmentGroups.add(group);
     }
 
     @Override
@@ -70,7 +89,9 @@ public class Course {
                 "id=" + id +
                 ", userId=" + userId +
                 ", name='" + name + '\'' +
-                ", assignments=" + assignments +
+                ", creditHours=" + creditHours +
+                ", gpa=" + gpa +
+                ", assignmentGroups=" + assignmentGroups +
                 '}';
     }
 }
