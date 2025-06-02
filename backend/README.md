@@ -1,3 +1,7 @@
+## About
+
+The backend is built in java with the api handling essentially build from scratch because frameworks such as spark or spring boot were not able to handle direct access to a lambda function from cloudfront. It is run on AWS lambda utilizing the free tier for lambda. It is being accessed through a lambda url along with cloudfronts free tier to avoid API gateways costs. Its state control is a MySQL database being hosted on an Oracle cloud VM. The SQL connection works and the lambda and local testing work so do not touch those unless specifically told to.
+
 ## Build
 
 #### Prod

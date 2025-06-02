@@ -2,6 +2,10 @@
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
+## About
+
+The frontend is build with React with a base of TypeScript. It is hosted on infinity free hosting at "https://coursegenius.free.nf" because it is free. May change to a real domain once the website is completed.
+
 ## To deploy
 
 Connect to ftp server (I used filezilla)
