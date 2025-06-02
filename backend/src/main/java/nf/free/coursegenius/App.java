@@ -28,7 +28,6 @@ public class App {
     public ResponseObject handleRequest(RequestContext ctx) {
         try {
             String[] path = ctx.getPathParts();
-
             // Call route handler if path is registered
             if (path.length > 0 && routes.containsKey(path[0])) {
                 Route route = routes.get(path[0]);

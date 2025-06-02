@@ -116,6 +116,7 @@ public class CourseRoute extends Route {
     }
 
     public ResponseObject getCourseById(RequestContext ctx) {// FIXME add authorization
+        System.out.println("Route: getCourseById");
         ResponseObject response = new ResponseObject();
         String courseIdStr = ctx.getQueryStringParameters().get("courseId");
 
