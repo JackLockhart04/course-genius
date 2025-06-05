@@ -13,4 +13,4 @@ buildNumber.properties
 .vscode/
 
 # Secrets
-src/main/resources/
+src/main/resources/*.properties
