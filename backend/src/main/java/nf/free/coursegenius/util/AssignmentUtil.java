@@ -159,9 +159,6 @@ public class AssignmentUtil {
         if (pointsPossible == null || pointsPossible.compareTo(BigDecimal.ZERO) <= 0) {
             throw new ApiException("Points possible must be greater than 0", 400);
         }
-        if (pointsEarned.compareTo(pointsPossible) > 0) {
-            throw new ApiException("Points earned cannot be greater than points possible", 400);
-        }
 
         // Calculate percentage grade
         BigDecimal percentageGrade = pointsEarned.divide(pointsPossible, 4, BigDecimal.ROUND_HALF_UP)
@@ -197,6 +194,49 @@ public class AssignmentUtil {
         }
     }
 
+    public static AssignmentGroup getAssignmentGroupById(int groupId) {
+        String sql = "SELECT ag.*, a.id AS assignment_id, a.name AS assignment_name, " +
+                     "a.points_earned, a.points_possible, a.percentage_grade " +
+                     "FROM assignment_group ag " +
+                     "LEFT JOIN assignment a ON ag.id = a.assignment_group_id " +
+                     "WHERE ag.id = ?";
+        
+        AssignmentGroup group = null;
+        try (Connection conn = getConnection();
+             PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setInt(1, groupId);
+            try (ResultSet rs = statement.executeQuery()) {
+                while (rs.next()) {
+                    if (group == null) {
+                        group = new AssignmentGroup(
+                            rs.getInt("id"),
+                            rs.getString("name"),
+                            rs.getBigDecimal("weight"),
+                            rs.getInt("course_id"),
+                            new ArrayList<>()
+                        );
+                    }
+
+                    int assignmentId = rs.getInt("assignment_id");
+                    if (assignmentId != 0) {
+                        Assignment assignment = new Assignment(
+                            assignmentId,
+                            groupId,
+                            rs.getString("assignment_name"),
+                            rs.getBigDecimal("points_earned"),
+                            rs.getBigDecimal("points_possible"),
+                            rs.getBigDecimal("percentage_grade")
+                        );
+                        group.addAssignment(assignment);
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            throw new ApiException("Error fetching assignment group: " + e.getMessage(), 500);
+        }
+        return group;
+    }
+
     private static Assignment mapResultSetToAssignment(ResultSet rs) {
         try {
             int id = rs.getInt("id");
@@ -209,6 +249,52 @@ public class AssignmentUtil {
             return new Assignment(id, assignmentGroupId, name, pointsEarned, pointsPossible, percentageGrade);
         } catch (SQLException e) {
             throw new ApiException("Error mapping result set to assignment: " + e.getMessage(), 500);
+        }
+    }
+
+    public static void updateAssignmentName(int assignmentId, String name) {
+        String sql = "UPDATE assignment SET name = ? WHERE id = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, name);
+            stmt.setInt(2, assignmentId);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            throw new ApiException("Failed to update assignment name: " + e.getMessage(), 500);
+        }
+    }
+
+    public static void updateAssignmentGroupName(int groupId, String name) {
+        String sql = "UPDATE assignment_group SET name = ? WHERE id = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, name);
+            stmt.setInt(2, groupId);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            throw new ApiException("Failed to update assignment group name: " + e.getMessage(), 500);
+        }
+    }
+
+    public static void deleteAssignmentGroup(int groupId) {
+        // First delete all assignments in the group
+        String deleteAssignmentsSql = "DELETE FROM assignment WHERE assignment_group_id = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(deleteAssignmentsSql)) {
+            stmt.setInt(1, groupId);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            throw new ApiException("Failed to delete assignments in group: " + e.getMessage(), 500);
+        }
+
+        // Then delete the group itself
+        String deleteGroupSql = "DELETE FROM assignment_group WHERE id = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(deleteGroupSql)) {
+            stmt.setInt(1, groupId);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            throw new ApiException("Failed to delete assignment group: " + e.getMessage(), 500);
         }
     }
 }

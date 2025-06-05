@@ -26,8 +26,12 @@ public class AssignmentRoute extends Route {
         registerHandler("/add-assignment", "POST", this::addAssignment);
         registerHandler("/get-assignment", "GET", this::getAssignmentById);
         registerHandler("/get-assignment-groups", "GET", this::getAssignmentGroupsByCourseId);
+        registerHandler("/get-assignment-group", "GET", this::getAssignmentGroupById);
         registerHandler("/update-assignment", "POST", this::updateAssignment);
+        registerHandler("/update-assignment-name", "POST", this::updateAssignmentName);
+        registerHandler("/update-assignment-group", "POST", this::updateAssignmentGroup);
         registerHandler("/delete-assignment", "POST", this::deleteAssignment);
+        registerHandler("/delete-assignment-group", "POST", this::deleteAssignmentGroup);
     }
 
     public ResponseObject addAssignmentGroup(RequestContext ctx) {
@@ -252,6 +256,49 @@ public class AssignmentRoute extends Route {
         return response;
     }
 
+    public ResponseObject getAssignmentGroupById(RequestContext ctx) {
+        ResponseObject response = new ResponseObject();
+        
+        // Get user access token from cookies
+        String userAccessToken = ctx.getCookie("accessToken");
+        if (userAccessToken == null) {
+            throw new ApiException("No access token given, not logged in", 401);
+        }
+
+        // Get userOid from access token
+        String userOid = UserUtil.getUserOidByAccessToken(userAccessToken);
+
+        String groupIdStr = ctx.getQueryStringParameters().get("groupId");
+        if (groupIdStr == null) {
+            throw new ApiException("Missing groupId parameter", 400);
+        }
+
+        try {
+            int groupId = Integer.parseInt(groupIdStr);
+            if (groupId <= 0) {
+                throw new ApiException("Invalid group ID", 400);
+            }
+
+            // Get assignment group and verify ownership
+            AssignmentGroup group = AssignmentUtil.getAssignmentGroupById(groupId);
+            if (group == null) {
+                throw new ApiException("Assignment group not found", 404);
+            }
+
+            // Verify group belongs to user's course
+            if (!UserUtil.checkCourseIdExists(userOid, group.getCourseId())) {
+                throw new ApiException("Unauthorized access to assignment group", 403);
+            }
+
+            response.setStatusCode(200);
+            response.addBody("assignmentGroup", group);
+        } catch (NumberFormatException e) {
+            throw new ApiException("Invalid groupId format", 400);
+        }
+
+        return response;
+    }
+
     public ResponseObject updateAssignment(RequestContext ctx) {
         ResponseObject response = new ResponseObject();
         
@@ -309,16 +356,104 @@ public class AssignmentRoute extends Route {
             throw new ApiException("Invalid pointsPossible format", 400);
         }
 
-        if (pointsEarned.compareTo(pointsPossible) > 0) {
-            throw new ApiException("Points earned cannot be greater than points possible", 400);
-        }
-
         // Update assignment
         AssignmentUtil.updateAssignment(assignmentId, pointsEarned, pointsPossible);
 
         // Return success response
         response.setStatusCode(200);
         response.addBody("message", "Assignment updated successfully");
+        return response;
+    }
+
+    public ResponseObject updateAssignmentName(RequestContext ctx) {
+        ResponseObject response = new ResponseObject();
+        
+        // Get user access token from cookies
+        String userAccessToken = ctx.getCookie("accessToken");
+        if (userAccessToken == null) {
+            throw new ApiException("No access token given, not logged in", 401);
+        }
+
+        // Get userOid from access token
+        String userOid = UserUtil.getUserOidByAccessToken(userAccessToken);
+
+        // Get assignmentId from request body
+        Object assignmentIdObj = ctx.getBody().get("assignmentId");
+        if (assignmentIdObj == null) {
+            throw new ApiException("Missing assignmentId parameter", 400);
+        }
+        int assignmentId;
+        try {
+            assignmentId = Integer.parseInt(assignmentIdObj.toString());
+            if (assignmentId <= 0) {
+                throw new ApiException("Invalid assignment ID", 400);
+            }
+        } catch (NumberFormatException e) {
+            throw new ApiException("Invalid assignmentId format", 400);
+        }
+
+        // Get name from request body
+        Object nameObj = ctx.getBody().get("name");
+        if (nameObj == null) {
+            throw new ApiException("Missing name parameter", 400);
+        }
+        String name = nameObj.toString();
+        if (name.isEmpty()) {
+            throw new ApiException("Assignment name cannot be empty", 400);
+        }
+
+        // Update assignment name
+        AssignmentUtil.updateAssignmentName(assignmentId, name);
+
+        // Return success response
+        response.setStatusCode(200);
+        response.addBody("message", "Assignment name updated successfully");
+        return response;
+    }
+
+    public ResponseObject updateAssignmentGroup(RequestContext ctx) {
+        ResponseObject response = new ResponseObject();
+        
+        // Get user access token from cookies
+        String userAccessToken = ctx.getCookie("accessToken");
+        if (userAccessToken == null) {
+            throw new ApiException("No access token given, not logged in", 401);
+        }
+
+        // Get userOid from access token
+        String userOid = UserUtil.getUserOidByAccessToken(userAccessToken);
+
+        // Get groupId from request body
+        Object groupIdObj = ctx.getBody().get("groupId");
+        if (groupIdObj == null) {
+            throw new ApiException("Missing groupId parameter", 400);
+        }
+        int groupId;
+        try {
+            groupId = Integer.parseInt(groupIdObj.toString());
+            if (groupId <= 0) {
+                throw new ApiException("Invalid group ID", 400);
+            }
+        } catch (NumberFormatException e) {
+            throw new ApiException("Invalid groupId format", 400);
+        }
+
+        // Get name from request body
+        Object nameObj = ctx.getBody().get("name");
+        if (nameObj == null) {
+            throw new ApiException("Missing name parameter", 400);
+        }
+        String name = nameObj.toString();
+        if (name.isEmpty()) {
+            throw new ApiException("Group name cannot be empty", 400);
+        }
+
+        // Update assignment group name
+        AssignmentUtil.updateAssignmentGroupName(groupId, name);
+
+        // Return success response
+        response.setStatusCode(200);
+        response.addBody("message", "Assignment group name updated successfully");
         return response;
     }
 
@@ -355,6 +490,42 @@ public class AssignmentRoute extends Route {
         // Return success response
         response.setStatusCode(200);
         response.addBody("message", "Assignment deleted successfully");
+        return response;
+    }
+
+    public ResponseObject deleteAssignmentGroup(RequestContext ctx) {
+        ResponseObject response = new ResponseObject();
+        
+        // Get user access token from cookies
+        String userAccessToken = ctx.getCookie("accessToken");
+        if (userAccessToken == null) {
+            throw new ApiException("No access token given, not logged in", 401);
+        }
+
+        // Get userOid from access token
+        String userOid = UserUtil.getUserOidByAccessToken(userAccessToken);
+
+        // Get groupId from request body
+        Object groupIdObj = ctx.getBody().get("groupId");
+        if (groupIdObj == null) {
+            throw new ApiException("Missing groupId parameter", 400);
+        }
+        int groupId;
+        try {
+            groupId = Integer.parseInt(groupIdObj.toString());
+            if (groupId <= 0) {
+                throw new ApiException("Invalid group ID", 400);
+            }
+        } catch (NumberFormatException e) {
+            throw new ApiException("Invalid groupId format", 400);
+        }
+
+        // Delete assignment group
+        AssignmentUtil.deleteAssignmentGroup(groupId);
+
+        // Return success response
+        response.setStatusCode(200);
+        response.addBody("message", "Assignment group deleted successfully");
         return response;
     }
 }

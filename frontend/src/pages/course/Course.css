@@ -1,131 +1,192 @@
 .courseContainer {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  text-align: center;
   max-width: 800px;
   margin: 0 auto;
+  padding: 20px;
+}
+
+.courseHeader {
+  margin-bottom: 30px;
+  text-align: center;
+}
+
+.courseHeader h1 {
+  margin-bottom: 10px;
+  color: #333;
 }
 
 .courseInfo {
-  background-color: #2a2a2a;
-  padding: 15px;
-  border-radius: 8px;
-  margin: 20px 0;
-  width: 100%;
+  margin-bottom: 20px;
+  color: #666;
 }
 
-.courseInfo p {
-  margin: 5px 0;
-  color: #ccc;
-  font-size: 1.1em;
-}
-
-.assignmentGroup {
-  background-color: #2a2a2a;
-  border-radius: 8px;
-  padding: 15px;
-  margin: 15px 0;
-  width: 100%;
-}
-
-.assignmentGroup h3 {
-  color: #fff;
-  margin: 0 0 15px 0;
-  font-size: 1.2em;
-}
-
-.assignmentRow {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  width: 100%;
-  min-height: 8vh;
-  border-bottom: 1px solid #444;
-  box-sizing: border-box;
-  padding: 10px;
-}
-
-.assignmentRow:last-child {
-  border-bottom: none;
-}
-
-.assignmentItem {
-  font-size: 1.1em;
-  color: inherit;
-  text-decoration: none;
-  width: 100%;
-  text-align: left;
-}
-
-.assignmentItem:hover {
-  text-decoration: none;
-  color: #4CAF50;
-}
-
-.addGroupSection {
-  background-color: #333;
-  padding: 20px;
-  border-radius: 8px;
-  margin: 20px 0;
-  width: 100%;
-}
-
-.addGroupSection h3 {
-  color: #fff;
-  margin: 0 0 15px 0;
-}
-
-.inputGroup {
-  display: flex;
-  gap: 10px;
-  justify-content: center;
-  align-items: center;
-}
-
-.inputGroup input {
-  padding: 8px;
-  border: 1px solid #444;
-  border-radius: 4px;
-  background-color: #2a2a2a;
-  color: #fff;
-}
-
-.inputGroup button {
+.editButton, .deleteButton, .saveButton, .cancelButton {
   padding: 8px 16px;
-  background-color: #4CAF50;
-  color: white;
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  transition: background-color 0.3s;
+  font-size: 14px;
+  transition: background-color 0.2s;
 }
 
-.inputGroup button:hover {
+.editButton {
+  background-color: #4CAF50;
+  color: white;
+  margin-right: 10px;
+}
+
+.editButton:hover {
   background-color: #45a049;
 }
 
-.deleteCourseButton {
-  padding: 10px 20px;
-  font-size: 1rem;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  transition: background-color 0.3s ease, transform 0.2s ease;
-  margin: 20px 0;
+.deleteButton {
   background-color: #f44336;
   color: white;
 }
 
-.deleteCourseButton:hover {
-  background-color: #d32f2f;
-  transform: scale(1.05);
+.deleteButton:hover {
+  background-color: #da190b;
+}
+
+.saveButton {
+  background-color: #2196F3;
+  color: white;
+  margin-right: 10px;
+}
+
+.saveButton:hover {
+  background-color: #0b7dda;
+}
+
+.cancelButton {
+  background-color: #9e9e9e;
+  color: white;
+}
+
+.cancelButton:hover {
+  background-color: #757575;
+}
+
+.buttonGroup {
+  display: flex;
+  gap: 10px;
+  margin: 10px 0;
+}
+
+.editCourseSection {
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.inputGroup {
+  margin-bottom: 15px;
+}
+
+.inputGroup label {
+  display: block;
+  margin-bottom: 5px;
+  color: #666;
+}
+
+.inputGroup input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.assignmentGroups {
+  margin-top: 30px;
+}
+
+.assignmentGroup {
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.groupHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.groupHeader h2 {
+  margin: 0;
+  color: #333;
+}
+
+.editGroupSection, .editAssignmentSection {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.editGroupSection input, .editAssignmentSection input {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.assignmentsList {
+  margin-top: 15px;
+}
+
+.assignmentItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  background-color: white;
+  border-radius: 4px;
+  margin-bottom: 10px;
+}
+
+.assignmentName {
+  color: #2196F3;
+  text-decoration: none;
+  flex: 1;
+}
+
+.assignmentName:hover {
+  text-decoration: underline;
+}
+
+.assignmentGrade {
+  margin: 0 15px;
+  color: #666;
+}
+
+.backButton {
+  display: inline-block;
+  margin-top: 20px;
+  padding: 10px 20px;
+  background-color: #2196F3;
+  color: white;
+  text-decoration: none;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.backButton:hover {
+  background-color: #0b7dda;
 }
 
 .error {
-  color: #ff4d4d;
-  font-size: 1.2em;
-  margin: 10px 0;
+  background-color: #ffebee;
+  color: #c62828;
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+
+.loading {
+  text-align: center;
+  padding: 20px;
+  color: #666;
 }

@@ -103,7 +103,10 @@ public class UserUtil {
             throw new ApiException("Invalid assignment ID", 400);
         }
         // Check if assignment ID exists and belongs to user
-        String sql = "SELECT * FROM assignment WHERE id = ? AND course_id = (SELECT id FROM course WHERE user_id = (SELECT id FROM user WHERE oid = ?))";
+        String sql = "SELECT * FROM assignment a " +
+                    "JOIN assignment_group ag ON a.assignment_group_id = ag.id " +
+                    "JOIN course c ON ag.course_id = c.id " +
+                    "WHERE a.id = ? AND c.user_id = (SELECT id FROM user WHERE oid = ?)";
         try (Connection conn = getConnection();
              PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setInt(1, assignmentId);

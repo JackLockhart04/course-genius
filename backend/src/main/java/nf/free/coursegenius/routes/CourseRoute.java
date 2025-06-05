@@ -25,10 +25,10 @@ public class CourseRoute extends Route {
 
     public void registerRoutes() {
         registerHandler("/add-course", "POST", this::addCourse);
-        registerHandler("/delete-course", "POST", this::deleteCourse);
-        registerHandler("/get-all-courses", "GET", this::getCoursesByUser);
+        registerHandler("/get-courses", "GET", this::getCourses);
         registerHandler("/get-course", "GET", this::getCourseById);
-        registerHandler("/update-course-gpa", "POST", this::updateCourseGpa);
+        registerHandler("/update-course", "POST", this::updateCourse);
+        registerHandler("/delete-course", "POST", this::deleteCourse);
     }
 
     public ResponseObject addCourse(RequestContext ctx) {
@@ -59,8 +59,8 @@ public class CourseRoute extends Route {
         if (creditHoursObj != null) {
             try {
                 creditHours = new BigDecimal(creditHoursObj.toString());
-                if (creditHours.compareTo(BigDecimal.ZERO) <= 0) {
-                    throw new ApiException("Credit hours must be greater than 0", 400);
+                if (creditHours.compareTo(BigDecimal.ZERO) < 0) {
+                    throw new ApiException("Credit hours cannot be negative", 400);
                 }
             } catch (NumberFormatException e) {
                 throw new ApiException("Invalid credit hours format", 400);
@@ -78,7 +78,7 @@ public class CourseRoute extends Route {
 
     public ResponseObject deleteCourse(RequestContext ctx) {
         ResponseObject response = new ResponseObject();
-
+        
         // Get user access token from cookies
         String userAccessToken = ctx.getCookie("accessToken");
         if (userAccessToken == null) {
@@ -88,12 +88,11 @@ public class CourseRoute extends Route {
         // Get userOid from access token
         String userOid = UserUtil.getUserOidByAccessToken(userAccessToken);
 
-        // Get courseID from request body
+        // Get courseId from request body
         Object courseIdObj = ctx.getBody().get("courseId");
         if (courseIdObj == null) {
             throw new ApiException("Missing courseId parameter", 400);
         }
-        
         int courseId;
         try {
             courseId = Integer.parseInt(courseIdObj.toString());
@@ -105,7 +104,7 @@ public class CourseRoute extends Route {
         }
 
         // Delete course
-        CourseUtil.deleteCourseById(courseId, userOid);
+        CourseUtil.deleteCourse(courseId);
 
         // Return success response
         response.setStatusCode(200);
@@ -113,7 +112,7 @@ public class CourseRoute extends Route {
         return response;
     }
 
-    public ResponseObject getCoursesByUser(RequestContext ctx) {
+    public ResponseObject getCourses(RequestContext ctx) {
         ResponseObject response = new ResponseObject();
 
         // Get user access token from cookies
@@ -182,7 +181,7 @@ public class CourseRoute extends Route {
         return response;
     }
 
-    public ResponseObject updateCourseGpa(RequestContext ctx) {
+    public ResponseObject updateCourse(RequestContext ctx) {
         ResponseObject response = new ResponseObject();
 
         // Get user access token from cookies
@@ -210,20 +209,44 @@ public class CourseRoute extends Route {
             throw new ApiException("Invalid courseId format", 400);
         }
 
-        // Get GPA from request body
-        Object gpaObj = ctx.getBody().get("gpa");
-        if (gpaObj == null) {
-            throw new ApiException("Missing gpa parameter", 400);
+        // Get name from request body
+        Object nameObj = ctx.getBody().get("name");
+        if (nameObj == null) {
+            throw new ApiException("Missing name parameter", 400);
+        }
+        String name = nameObj.toString();
+        if (name.isEmpty()) {
+            throw new ApiException("Course name cannot be empty", 400);
         }
 
-        BigDecimal gpa;
+        // Get credit hours from request body
+        Object creditHoursObj = ctx.getBody().get("creditHours");
+        if (creditHoursObj == null) {
+            throw new ApiException("Missing creditHours parameter", 400);
+        }
+
+        BigDecimal creditHours;
         try {
-            gpa = new BigDecimal(gpaObj.toString());
-            if (gpa.compareTo(BigDecimal.ZERO) < 0 || gpa.compareTo(new BigDecimal("4.0")) > 0) {
-                throw new ApiException("GPA must be between 0 and 4.0", 400);
+            creditHours = new BigDecimal(creditHoursObj.toString());
+            if (creditHours.compareTo(BigDecimal.ZERO) <= 0) {
+                throw new ApiException("Credit hours must be greater than 0", 400);
             }
         } catch (NumberFormatException e) {
-            throw new ApiException("Invalid GPA format", 400);
+            throw new ApiException("Invalid credit hours format", 400);
+        }
+
+        // Get GPA from request body (optional)
+        BigDecimal gpa = null;
+        Object gpaObj = ctx.getBody().get("gpa");
+        if (gpaObj != null) {
+            try {
+                gpa = new BigDecimal(gpaObj.toString());
+                if (gpa.compareTo(BigDecimal.ZERO) < 0 || gpa.compareTo(new BigDecimal("100")) > 0) {
+                    throw new ApiException("GPA must be between 0 and 100", 400);
+                }
+            } catch (NumberFormatException e) {
+                throw new ApiException("Invalid GPA format", 400);
+            }
         }
 
         // Verify course belongs to user
@@ -237,12 +260,20 @@ public class CourseRoute extends Route {
             throw new ApiException("Unauthorized access to course", 403);
         }
 
-        // Update course GPA
-        CourseUtil.updateCourseGpa(courseId, gpa);
+        // Update course
+        CourseUtil.updateCourse(courseId, name, creditHours);
+        
+        // Update GPA if provided
+        if (gpa != null) {
+            CourseUtil.updateCourseGpa(courseId, gpa);
+        }
+
+        // Get updated course
+        Course updatedCourse = CourseUtil.getCourseById(courseId);
 
         // Return success response
         response.setStatusCode(200);
-        response.addBody("message", "Course GPA updated successfully");
+        response.addBody("course", updatedCourse);
         return response;
     }
 }

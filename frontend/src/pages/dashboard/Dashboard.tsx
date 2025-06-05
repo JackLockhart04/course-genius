@@ -8,7 +8,7 @@ interface Course {
   userId: number;
   name: string;
   creditHours: number;
-  gpa: number;
+  gpa: number | null;
   assignmentGroups: AssignmentGroup[];
 }
 
@@ -22,8 +22,9 @@ interface AssignmentGroup {
 interface Assignment {
   id: number;
   name: string;
-  weight: number;
-  grade: number | null;
+  pointsEarned: number;
+  pointsPossible: number;
+  percentageGrade: number;
 }
 
 const Dashboard: React.FC = () => {
@@ -34,6 +35,26 @@ const Dashboard: React.FC = () => {
 
   const apiDomain = process.env.REACT_APP_API_DOMAIN;
 
+  // Calculate course grade based on assignment groups and their weights
+  const calculateCourseGrade = (course: Course): number => {
+    let totalGrade = 0;
+    let totalWeight = 0;
+
+    course.assignmentGroups.forEach(group => {
+      if (group.assignments.length > 0) {
+        // Get the average grade for this group
+        const groupGrade = group.assignments.reduce((sum, assignment) => sum + assignment.percentageGrade, 0) / group.assignments.length;
+        
+        // Add weighted grade (group grade * weight percentage)
+        totalGrade += groupGrade * (group.weight / 100);
+        totalWeight += group.weight / 100;
+      }
+    });
+
+    // Return the weighted average
+    return totalWeight > 0 ? totalGrade : 0;
+  };
+
   useEffect(() => {
     if (!user.loggedIn) {
       return;
@@ -41,7 +62,7 @@ const Dashboard: React.FC = () => {
     // Fetch data
     const fetchCourses = async () => {
       try {
-        const response = await fetch(`${apiDomain}/course/get-all-courses`, {
+        const response = await fetch(`${apiDomain}/course/get-courses`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -66,39 +87,17 @@ const Dashboard: React.FC = () => {
     fetchCourses();
   }, [user, apiDomain]);
 
-  // Only show logged in users
-  if (loading) {
-    return (
-      <div className="dashboardContainer">
-        <div className="message">Loading...</div>
-      </div>
-    );
-  }
-
-  if (!user.loggedIn) {
-    return (
-      <div className="dashboardContainer">
-        <div className="message">You need to log in to view this page</div>
-      </div>
-    );
-  }
-
-  if (loadingCourses) {
-    return (
-      <div className="dashboardContainer">
-        <div className="message">Loading courses...</div>
-      </div>
-    );
-  }
-
   // Add course function
   const addCourse = async () => {
     // Get course name from input field
     const courseName = (
       document.getElementById("addCourseName") as HTMLInputElement
     ).value;
-    const creditHours = (
+    const creditHoursInput = (
       document.getElementById("addCourseCreditHours") as HTMLInputElement
+    ).value;
+    const gpaInput = (
+      document.getElementById("addCourseGpa") as HTMLInputElement
     ).value;
 
     // Validation
@@ -110,10 +109,9 @@ const Dashboard: React.FC = () => {
       setError("Course name cannot be longer than 50 characters");
       return;
     }
-    if (!creditHours || isNaN(Number(creditHours)) || Number(creditHours) <= 0) {
-      setError("Credit hours must be a positive number");
-      return;
-    }
+
+    // Convert credit hours to number, default to 0 if empty or invalid
+    const creditHours = creditHoursInput ? Number(creditHoursInput) : 0;
 
     // Fetch
     try {
@@ -126,7 +124,8 @@ const Dashboard: React.FC = () => {
         credentials: "include",
         body: JSON.stringify({ 
           courseName: courseName,
-          creditHours: Number(creditHours)
+          creditHours: creditHours,
+          gpa: gpaInput ? Number(gpaInput) : null
         }),
       });
 
@@ -160,6 +159,31 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  // Only show logged in users
+  if (loading) {
+    return (
+      <div className="dashboardContainer">
+        <div className="message">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!user.loggedIn) {
+    return (
+      <div className="dashboardContainer">
+        <div className="message">You need to log in to view this page</div>
+      </div>
+    );
+  }
+
+  if (loadingCourses) {
+    return (
+      <div className="dashboardContainer">
+        <div className="message">Loading courses...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="dashboardContainer">
       <h1>Dashboard</h1>
@@ -168,9 +192,9 @@ const Dashboard: React.FC = () => {
           <Link to={`/course/${course.id}`} className="courseItem">
             <div className="courseInfo">
               <h3>{course.name}</h3>
+              <p>Grade: {calculateCourseGrade(course).toFixed(1)}%</p>
+              <p>GPA: {course.gpa !== null && course.gpa !== undefined ? course.gpa.toFixed(2) : 'N/A'}</p>
               <p>Credit Hours: {course.creditHours}</p>
-              <p>GPA: {course.gpa ? course.gpa.toFixed(2) : 'N/A'}</p>
-              <p>Assignment Groups: {course.assignmentGroups.length}</p>
             </div>
           </Link>
         </div>
@@ -178,6 +202,7 @@ const Dashboard: React.FC = () => {
       <div className="courseRow" id="addCourse">
         <input id="addCourseName" type="text" placeholder="Course name" />
         <input id="addCourseCreditHours" type="number" placeholder="Credit hours" min="0" step="0.5" />
+        <input id="addCourseGpa" type="number" placeholder="GPA (0-100)" min="0" max="100" step="0.1" />
         <button onClick={addCourse}>Add course</button>
       </div>
       {error && <div className="error">{error}</div>}

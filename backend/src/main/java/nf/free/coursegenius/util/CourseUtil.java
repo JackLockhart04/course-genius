@@ -44,7 +44,7 @@ public class CourseUtil {
             throw new ApiException("User ID cannot be null or empty", 400);
         }
         if (creditHours == null) {
-            creditHours = new BigDecimal("3.0"); // Default credit hours
+            creditHours = BigDecimal.ZERO; // Default to 0 credit hours
         }
 
         // User stuff
@@ -250,6 +250,13 @@ public class CourseUtil {
     }
 
     public static void updateCourseGpa(int courseId, BigDecimal gpa) {
+        // Validate GPA is between 0 and 100
+        if (gpa != null) {
+            if (gpa.compareTo(BigDecimal.ZERO) < 0 || gpa.compareTo(new BigDecimal("100")) > 0) {
+                throw new ApiException("GPA must be between 0 and 100", 400);
+            }
+        }
+
         String sql = "UPDATE course SET gpa = ? WHERE id = ?";
         try (Connection conn = getConnection();
              PreparedStatement statement = conn.prepareStatement(sql)) {
@@ -261,6 +268,86 @@ public class CourseUtil {
             }
         } catch (SQLException e) {
             throw new ApiException("Error updating course GPA: " + e.getMessage(), 500);
+        }
+    }
+
+    public static void updateCourse(int courseId, String name, BigDecimal creditHours) {
+        // Validate inputs
+        if (name == null || name.isEmpty()) {
+            throw new ApiException("Course name cannot be null or empty", 400);
+        }
+        if (creditHours == null) {
+            creditHours = BigDecimal.ZERO; // Default to 0 credit hours
+        }
+
+        // Check if course exists
+        Course existingCourse = getCourseById(courseId);
+        if (existingCourse == null) {
+            throw new ApiException("Course not found", 404);
+        }
+
+        // Check if the new name already exists for the user
+        String checkSql = "SELECT COUNT(*) FROM course WHERE user_id = ? AND name = ? AND id != ?";
+        try (Connection conn = getConnection();
+             PreparedStatement checkStatement = conn.prepareStatement(checkSql)) {
+            checkStatement.setInt(1, existingCourse.getUserId());
+            checkStatement.setString(2, name);
+            checkStatement.setInt(3, courseId);
+            ResultSet rs = checkStatement.executeQuery();
+            if (rs.next() && rs.getInt(1) > 0) {
+                throw new ApiException("Course name already exists for this user", 409);
+            }
+        } catch (SQLException e) {
+            throw new ApiException("Error checking course name: " + e.getMessage(), 500);
+        }
+
+        // Update the course
+        String sql = "UPDATE course SET name = ?, credit_hours = ? WHERE id = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setString(1, name);
+            statement.setBigDecimal(2, creditHours);
+            statement.setInt(3, courseId);
+            int rowsAffected = statement.executeUpdate();
+            if (rowsAffected == 0) {
+                throw new ApiException("Course not found", 404);
+            }
+        } catch (SQLException e) {
+            throw new ApiException("Error updating course: " + e.getMessage(), 500);
+        }
+    }
+
+    public static void deleteCourse(int courseId) {
+        // First delete all assignment groups and their assignments
+        String deleteAssignmentsSql = "DELETE a FROM assignment a " +
+                                    "INNER JOIN assignment_group ag ON a.assignment_group_id = ag.id " +
+                                    "WHERE ag.course_id = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(deleteAssignmentsSql)) {
+            stmt.setInt(1, courseId);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            throw new ApiException("Failed to delete assignments: " + e.getMessage(), 500);
+        }
+
+        // Delete assignment groups
+        String deleteGroupsSql = "DELETE FROM assignment_group WHERE course_id = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(deleteGroupsSql)) {
+            stmt.setInt(1, courseId);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            throw new ApiException("Failed to delete assignment groups: " + e.getMessage(), 500);
+        }
+
+        // Finally delete the course
+        String deleteCourseSql = "DELETE FROM course WHERE id = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(deleteCourseSql)) {
+            stmt.setInt(1, courseId);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            throw new ApiException("Failed to delete course: " + e.getMessage(), 500);
         }
     }
 }

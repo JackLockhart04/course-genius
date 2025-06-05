@@ -12,6 +12,7 @@ import Account from "./pages/account/Account";
 import Dashboard from "./pages/dashboard/Dashboard";
 import Course from "./pages/course/Course";
 import Assignment from "./pages/assignment/Assignment";
+import AssignmentGroup from "./pages/assignment-group/AssignmentGroup";
 
 const App: React.FC = () => {
   return (
@@ -27,6 +28,7 @@ const App: React.FC = () => {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/course/:courseId" element={<Course />} />
             <Route path="/assignment/:assignmentId" element={<Assignment />} />
+            <Route path="/assignment-group/:groupId" element={<AssignmentGroup />} />
           </Routes>
         </div>
       </Router>
