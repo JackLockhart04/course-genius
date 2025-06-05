@@ -241,8 +241,11 @@ public class CourseRoute extends Route {
         if (gpaObj != null) {
             try {
                 gpa = new BigDecimal(gpaObj.toString());
-                if (gpa.compareTo(BigDecimal.ZERO) < 0 || gpa.compareTo(new BigDecimal("100")) > 0) {
-                    throw new ApiException("GPA must be between 0 and 100", 400);
+                if (gpa.compareTo(BigDecimal.ZERO) < 0) {
+                    throw new ApiException("GPA cannot be negative", 400);
+                }
+                if (gpa.compareTo(new BigDecimal("1000000")) > 0) {
+                    throw new ApiException("GPA must be less than 1,000,000", 400);
                 }
             } catch (NumberFormatException e) {
                 throw new ApiException("Invalid GPA format", 400);

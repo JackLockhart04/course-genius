@@ -7,6 +7,9 @@ import nf.free.coursegenius.util.UserUtil;
 import nf.free.coursegenius.dto.User;
 import nf.free.coursegenius.exceptions.ApiException;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.Map;
 
 public class UserRoute extends Route {
@@ -39,10 +42,26 @@ public class UserRoute extends Route {
             throw new ApiException("OID not found in token data", 400);
         }
 
-        // Find user
+        // Find or create user
         User user = UserUtil.getUserByOid(oid);
-        if (user == null) {
-            throw new ApiException("User not found", 404);
+        
+        // Update user data if needed
+        String email = userData.get("email").toString();
+        String username = email.split("@")[0];
+        if (!email.equals(user.getEmail()) || !username.equals(user.getUsername())) {
+            String sql = "UPDATE user SET email = ?, username = ? WHERE oid = ?";
+            try (Connection conn = UserUtil.getConnection();
+                 PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, email);
+                statement.setString(2, username);
+                statement.setString(3, oid);
+                statement.executeUpdate();
+                
+                // Update user object
+                user = new User(user.getId(), oid, username, email);
+            } catch (SQLException e) {
+                throw new ApiException("Error updating user data", 500);
+            }
         }
 
         // Return data

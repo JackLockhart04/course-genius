@@ -17,11 +17,21 @@ public class TokenUtil {
         // Get the data from the token
         try {
             Map<String, Object> data = new HashMap<>();
-            SignedJWT signedJWT = SignedJWT.parse(token);
-            JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
-            data.putAll(claimsSet.getClaims());
+            // Split the token into parts (header.payload.signature)
+            String[] parts = token.split("\\.");
+            if (parts.length != 3) {
+                throw new ApiException("Invalid token format", 400);
+            }
+            // Decode the payload (second part)
+            String payload = new String(java.util.Base64.getUrlDecoder().decode(parts[1]));
+            // Parse the JSON payload
+            org.json.JSONObject json = new org.json.JSONObject(payload);
+            // Convert JSON to Map
+            for (String key : json.keySet()) {
+                data.put(key, json.get(key));
+            }
             return data;
-        } catch (ParseException e) {
+        } catch (Exception e) {
             throw new ApiException("Error parsing token: " + e.getMessage(), 500);
         }
     }

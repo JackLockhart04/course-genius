@@ -202,7 +202,7 @@ const Dashboard: React.FC = () => {
       <div className="courseRow" id="addCourse">
         <input id="addCourseName" type="text" placeholder="Course name" />
         <input id="addCourseCreditHours" type="number" placeholder="Credit hours" min="0" step="0.5" />
-        <input id="addCourseGpa" type="number" placeholder="GPA (0-100)" min="0" max="100" step="0.1" />
+        <input id="addCourseGpa" type="number" placeholder="GPA" min="0" step="0.1" />
         <button onClick={addCourse}>Add course</button>
       </div>
       {error && <div className="error">{error}</div>}

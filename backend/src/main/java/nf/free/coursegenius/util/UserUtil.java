@@ -70,8 +70,57 @@ public class UserUtil {
             throw new ApiException("Error getting user by oid", 500);
         }
         
-        // User not found
-        throw new ApiException("User not found", 404);
+        // User not found - create new user
+        String insertSql = "INSERT INTO user (oid, email, username) VALUES (?, ?, ?)";
+        try (Connection conn = getConnection();
+             PreparedStatement statement = conn.prepareStatement(insertSql, PreparedStatement.RETURN_GENERATED_KEYS)) {
+            // For now, use oid as username and email since we don't have the token data here
+            statement.setString(1, oid);
+            statement.setString(2, oid + "@placeholder.com"); // Temporary email
+            statement.setString(3, oid); // Use oid as username temporarily
+            statement.executeUpdate();
+
+            // Get the generated ID
+            try (ResultSet rs = statement.getGeneratedKeys()) {
+                if (rs.next()) {
+                    int id = rs.getInt(1);
+                    return new User(id, oid, oid, oid + "@placeholder.com");
+                }
+            }
+        } catch (SQLException e) {
+            throw new ApiException("Error creating new user", 500);
+        }
+        
+        throw new ApiException("Failed to create new user", 500);
+    }
+
+    private static User createNewUser(String accessToken) {
+        // Get user data from token
+        Map<String, Object> userData = TokenUtil.getUserDataFromToken(accessToken);
+        String oid = userData.get("oid").toString();
+        String email = userData.get("email").toString();
+        String username = email.split("@")[0]; // Use email prefix as username
+
+        String sql = "INSERT INTO user (oid, email, username) VALUES (?, ?, ?)";
+        try (Connection conn = getConnection();
+             PreparedStatement statement = conn.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS)) {
+            statement.setString(1, oid);
+            statement.setString(2, email);
+            statement.setString(3, username);
+            statement.executeUpdate();
+
+            // Get the generated ID
+            try (ResultSet rs = statement.getGeneratedKeys()) {
+                if (rs.next()) {
+                    int id = rs.getInt(1);
+                    return new User(id, oid, username, email);
+                }
+            }
+        } catch (SQLException e) {
+            throw new ApiException("Error creating new user", 500);
+        }
+        
+        throw new ApiException("Failed to create new user", 500);
     }
 
     public static boolean checkCourseIdExists(String userOid, int courseId) {

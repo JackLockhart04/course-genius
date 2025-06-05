@@ -84,8 +84,11 @@ public class AssignmentRoute extends Route {
         BigDecimal weight;
         try {
             weight = new BigDecimal(weightObj.toString());
-            if (weight.compareTo(BigDecimal.ZERO) <= 0 || weight.compareTo(BigDecimal.ONE) > 0) {
-                throw new ApiException("Weight must be between 0 and 1", 400);
+            if (weight.compareTo(BigDecimal.ZERO) <= 0) {
+                throw new ApiException("Weight must be greater than 0", 400);
+            }
+            if (weight.compareTo(new BigDecimal("1000000")) > 0) {
+                throw new ApiException("Weight must be less than 1,000,000", 400);
             }
         } catch (NumberFormatException e) {
             throw new ApiException("Invalid weight format", 400);

@@ -333,9 +333,8 @@ const Course: React.FC = () => {
               type="number"
               value={editedGpa === null ? '' : editedGpa}
               onChange={(e) => setEditedGpa(e.target.value ? parseFloat(e.target.value) : null)}
-              placeholder="GPA (0-100)"
+              placeholder="GPA"
               min="0"
-              max="100"
               step="0.1"
             />
             <button onClick={updateCourse} className="saveButton">Save Changes</button>
