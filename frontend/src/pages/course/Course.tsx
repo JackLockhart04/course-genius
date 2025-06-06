@@ -101,33 +101,6 @@ const Course: React.FC = () => {
     }
   };
 
-  const deleteAssignmentGroup = async (groupId: number) => {
-    if (!window.confirm("Are you sure you want to delete this assignment group? This will also delete all assignments in the group.")) {
-      return;
-    }
-
-    try {
-      const response = await fetch(`${apiDomain}/assignment/delete-assignment-group`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: "include",
-        body: JSON.stringify({ groupId: Number(groupId) }),
-      });
-
-      if (response.ok) {
-        // Refresh the course data
-        await fetchCourse();
-      } else {
-        const errorData = await response.json();
-        setError(errorData.message || "Failed to delete assignment group");
-      }
-    } catch (error) {
-      setError("Error deleting assignment group");
-    }
-  };
-
   const deleteAssignment = async (assignmentId: number) => {
     if (!window.confirm("Are you sure you want to delete this assignment?")) {
       return;
