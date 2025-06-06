@@ -3,6 +3,7 @@ package nf.free.coursegenius.util;
 import nf.free.coursegenius.config.AppConfig;
 import nf.free.coursegenius.dto.User;
 import nf.free.coursegenius.exceptions.ApiException;
+import nf.free.coursegenius.services.TokenService;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -34,11 +35,9 @@ public class UserUtil {
         if (accessToken == null || accessToken.isEmpty()) {
             throw new ApiException("Access token cannot be null or empty", 400);
         }
-        // Get user data from token
-        Map<String, Object> userData = TokenUtil.getUserDataFromToken(accessToken);
-        if (userData == null || userData.isEmpty()) {
-            throw new ApiException("Invalid access token", 500);
-        }
+        // Get user data from token using TokenService
+        Map<String, Object> userData = TokenService.validateAndGetUserData(accessToken);
+        
         // Get user ID from token data
         Object userOidObj = userData.get("oid");
         if (userOidObj == null) {
@@ -94,33 +93,30 @@ public class UserUtil {
         throw new ApiException("Failed to create new user", 500);
     }
 
-    private static User createNewUser(String accessToken) {
-        // Get user data from token
-        Map<String, Object> userData = TokenUtil.getUserDataFromToken(accessToken);
-        String oid = userData.get("oid").toString();
-        String email = userData.get("email").toString();
+    public static User updateUserFromTokenData(String oid, Map<String, Object> tokenData) {
+        if (oid == null || oid.isEmpty()) {
+            throw new ApiException("User ID cannot be null or empty", 400);
+        }
+        if (tokenData == null || tokenData.isEmpty()) {
+            throw new ApiException("Token data cannot be null or empty", 400);
+        }
+
+        String email = tokenData.get("email").toString();
         String username = email.split("@")[0]; // Use email prefix as username
 
-        String sql = "INSERT INTO user (oid, email, username) VALUES (?, ?, ?)";
+        String sql = "UPDATE user SET email = ?, username = ? WHERE oid = ?";
         try (Connection conn = getConnection();
-             PreparedStatement statement = conn.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS)) {
-            statement.setString(1, oid);
-            statement.setString(2, email);
-            statement.setString(3, username);
+             PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setString(1, email);
+            statement.setString(2, username);
+            statement.setString(3, oid);
             statement.executeUpdate();
 
-            // Get the generated ID
-            try (ResultSet rs = statement.getGeneratedKeys()) {
-                if (rs.next()) {
-                    int id = rs.getInt(1);
-                    return new User(id, oid, username, email);
-                }
-            }
+            // Get updated user
+            return getUserByOid(oid);
         } catch (SQLException e) {
-            throw new ApiException("Error creating new user", 500);
+            throw new ApiException("Error updating user data", 500);
         }
-        
-        throw new ApiException("Failed to create new user", 500);
     }
 
     public static boolean checkCourseIdExists(String userOid, int courseId) {

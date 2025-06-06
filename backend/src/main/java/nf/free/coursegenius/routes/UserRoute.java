@@ -6,6 +6,7 @@ import nf.free.coursegenius.util.TokenUtil;
 import nf.free.coursegenius.util.UserUtil;
 import nf.free.coursegenius.dto.User;
 import nf.free.coursegenius.exceptions.ApiException;
+import nf.free.coursegenius.services.TokenService;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -36,42 +37,33 @@ public class UserRoute extends Route {
             return response;
         }
 
-        Map<String, Object> userData = TokenUtil.getUserDataFromToken(accessToken);
-        String oid = userData.get("oid").toString();
-        if (oid == null || oid.isEmpty()) {
-            throw new ApiException("OID not found in token data", 400);
-        }
-
-        // Find or create user
-        User user = UserUtil.getUserByOid(oid);
-        
-        // Update user data if needed
-        String email = userData.get("email").toString();
-        String username = email.split("@")[0];
-        if (!email.equals(user.getEmail()) || !username.equals(user.getUsername())) {
-            String sql = "UPDATE user SET email = ?, username = ? WHERE oid = ?";
-            try (Connection conn = UserUtil.getConnection();
-                 PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, email);
-                statement.setString(2, username);
-                statement.setString(3, oid);
-                statement.executeUpdate();
-                
-                // Update user object
-                user = new User(user.getId(), oid, username, email);
-            } catch (SQLException e) {
-                throw new ApiException("Error updating user data", 500);
+        try {
+            // Validate token and get user data
+            Map<String, Object> userData = TokenService.validateAndGetUserData(accessToken);
+            String oid = userData.get("oid").toString();
+            
+            // Get or create user
+            User user = UserUtil.getUserByOid(oid);
+            
+            // Update user data if needed
+            String email = userData.get("email").toString();
+            if (!email.equals(user.getEmail())) {
+                user = UserUtil.updateUserFromTokenData(oid, userData);
             }
+
+            // Return data
+            response.setStatusCode(200);
+            response.addBody("id", user.getId());
+            response.addBody("oid", user.getOid());
+            response.addBody("username", user.getUsername());
+            response.addBody("email", user.getEmail());
+
+            return response;
+        } catch (ApiException e) {
+            response.setStatusCode(e.getErrorCode());
+            response.addBody("message", e.getMessage());
+            return response;
         }
-
-        // Return data
-        response.setStatusCode(200);
-        response.addBody("id", user.getId());
-        response.addBody("oid", user.getOid());
-        response.addBody("username", user.getUsername());
-        response.addBody("email", user.getEmail());
-
-        return response;
     }
 
     public ResponseObject testGet(RequestContext ctx) {

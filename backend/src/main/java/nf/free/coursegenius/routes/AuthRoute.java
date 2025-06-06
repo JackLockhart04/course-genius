@@ -4,6 +4,7 @@ import nf.free.coursegenius.config.AppConfig;
 import nf.free.coursegenius.dto.ResponseObject;
 import nf.free.coursegenius.dto.RequestContext;
 import nf.free.coursegenius.exceptions.ApiException;
+import nf.free.coursegenius.services.TokenService;
 
 import com.microsoft.aad.msal4j.*;
 
@@ -59,6 +60,13 @@ public class AuthRoute extends Route {
                 .build();
             CompletableFuture<IAuthenticationResult> future = app.acquireToken(parameters);
             IAuthenticationResult result = future.get();
+
+            // Validate the token before setting it
+            try {
+                TokenService.validateAndGetUserData(result.accessToken());
+            } catch (ApiException e) {
+                throw new ApiException("Invalid token received from Microsoft: " + e.getMessage(), 500);
+            }
 
             // Set the access token as a cookie
             Cookie cookie = new Cookie("accessToken", result.accessToken());
