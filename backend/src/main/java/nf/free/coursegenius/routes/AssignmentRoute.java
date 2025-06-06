@@ -451,12 +451,30 @@ public class AssignmentRoute extends Route {
             throw new ApiException("Group name cannot be empty", 400);
         }
 
-        // Update assignment group name
-        AssignmentUtil.updateAssignmentGroupName(groupId, name);
+        // Get weight from request body
+        Object weightObj = ctx.getBody().get("weight");
+        if (weightObj == null) {
+            throw new ApiException("Missing weight parameter", 400);
+        }
+        BigDecimal weight;
+        try {
+            weight = new BigDecimal(weightObj.toString());
+            if (weight.compareTo(BigDecimal.ZERO) <= 0) {
+                throw new ApiException("Weight must be greater than 0", 400);
+            }
+            if (weight.compareTo(new BigDecimal("1000000")) > 0) {
+                throw new ApiException("Weight must be less than 1,000,000", 400);
+            }
+        } catch (NumberFormatException e) {
+            throw new ApiException("Invalid weight format", 400);
+        }
+
+        // Update assignment group
+        AssignmentUtil.updateAssignmentGroup(groupId, name, weight);
 
         // Return success response
         response.setStatusCode(200);
-        response.addBody("message", "Assignment group name updated successfully");
+        response.addBody("message", "Assignment group updated successfully");
         return response;
     }
 

@@ -29,65 +29,48 @@ interface Course {
 
 const Course: React.FC = () => {
   const { courseId } = useParams<{ courseId: string }>();
-  const navigate = useNavigate();
   const [course, setCourse] = useState<Course | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState("");
   const [editedCreditHours, setEditedCreditHours] = useState(0);
   const [editedGpa, setEditedGpa] = useState<number | null>(null);
-  const [editingGroupId, setEditingGroupId] = useState<number | null>(null);
-  const [editingGroupName, setEditingGroupName] = useState("");
-  const [editingAssignmentId, setEditingAssignmentId] = useState<number | null>(null);
-  const [editingAssignmentName, setEditingAssignmentName] = useState("");
 
+  const navigate = useNavigate();
   const apiDomain = process.env.REACT_APP_API_DOMAIN;
-
-  const fetchCourse = async () => {
-    try {
-      const response = await fetch(`${apiDomain}/course/get-course?courseId=${courseId}`, {
-        credentials: "include"
-      });
-      if (!response.ok) {
-        throw new Error('Failed to fetch course');
-      }
-      const data = await response.json();
-      setCourse(data.course);
-      setEditedName(data.course.name);
-      setEditedCreditHours(data.course.creditHours);
-      setEditedGpa(data.course.gpa);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-    }
-  };
 
   useEffect(() => {
     fetchCourse();
   }, [courseId]);
 
-  const updateCourse = async () => {
-    if (!editedName || !editedCreditHours) {
-      setError("Please fill in all required fields");
-      return;
-    }
-
-    if (editedName.length > 50) {
-      setError("Course name cannot be longer than 50 characters");
-      return;
-    }
-
-    const creditHoursNum = Number(editedCreditHours);
-    if (isNaN(creditHoursNum) || creditHoursNum <= 0) {
-      setError("Credit hours must be a positive number");
-      return;
-    }
-
-    if (editedGpa !== null) {
-      const gpaNum = Number(editedGpa);
-      if (isNaN(gpaNum) || gpaNum < 0) {
-        setError("GPA cannot be negative");
-        return;
+  const fetchCourse = async () => {
+    try {
+      const response = await fetch(
+        `${apiDomain}/course/get-course?courseId=${courseId}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+        }
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setCourse(data.course);
+      } else {
+        const errorData = await response.json();
+        setError(errorData.message || "Failed to fetch course");
       }
+    } catch (error) {
+      setError("Error fetching course");
+    }
+  };
+
+  const updateCourse = async () => {
+    if (!editedName) {
+      setError("Course name cannot be empty");
+      return;
     }
 
     try {
@@ -100,86 +83,21 @@ const Course: React.FC = () => {
         body: JSON.stringify({
           courseId,
           name: editedName,
-          creditHours: creditHoursNum,
+          creditHours: editedCreditHours,
           gpa: editedGpa
         }),
       });
 
       if (response.ok) {
-        const data = await response.json();
-        setCourse(data.course);
+        // Refresh the course data
+        await fetchCourse();
         setIsEditing(false);
-        setError(null);
       } else {
         const errorData = await response.json();
         setError(errorData.message || "Failed to update course");
       }
     } catch (error) {
       setError("Error updating course");
-    }
-  };
-
-  const updateAssignmentGroup = async (groupId: number) => {
-    if (!editingGroupName) {
-      setError("Group name cannot be empty");
-      return;
-    }
-
-    try {
-      const response = await fetch(`${apiDomain}/assignment/update-assignment-group`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: "include",
-        body: JSON.stringify({
-          groupId,
-          name: editingGroupName
-        }),
-      });
-
-      if (response.ok) {
-        // Refresh the course data
-        await fetchCourse();
-        setEditingGroupId(null);
-      } else {
-        const errorData = await response.json();
-        setError(errorData.message || "Failed to update assignment group");
-      }
-    } catch (error) {
-      setError("Error updating assignment group");
-    }
-  };
-
-  const updateAssignment = async (assignmentId: number) => {
-    if (!editingAssignmentName) {
-      setError("Assignment name cannot be empty");
-      return;
-    }
-
-    try {
-      const response = await fetch(`${apiDomain}/assignment/update-assignment-name`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: "include",
-        body: JSON.stringify({
-          assignmentId,
-          name: editingAssignmentName
-        }),
-      });
-
-      if (response.ok) {
-        // Refresh the course data
-        await fetchCourse();
-        setEditingAssignmentId(null);
-      } else {
-        const errorData = await response.json();
-        setError(errorData.message || "Failed to update assignment");
-      }
-    } catch (error) {
-      setError("Error updating assignment");
     }
   };
 
@@ -360,80 +278,29 @@ const Course: React.FC = () => {
       {course.assignmentGroups.length > 0 ? (
         course.assignmentGroups.map((group) => (
           <div key={group.id} className="assignmentGroup">
-            {editingGroupId === group.id ? (
-              <div className="editGroupSection">
-                <input
-                  type="text"
-                  value={editingGroupName}
-                  onChange={(e) => setEditingGroupName(e.target.value)}
-                  placeholder="Group name"
-                />
-                <button onClick={() => updateAssignmentGroup(group.id)} className="saveButton">
-                  Save
-                </button>
-                <button onClick={() => setEditingGroupId(null)} className="cancelButton">
-                  Cancel
-                </button>
+            <div className="groupHeader">
+              <div className="groupTitle">
+                <Link to={`/assignment-group/${group.id}`}>
+                  <h3>{group.name} ({group.weight.toFixed(1)}%)</h3>
+                </Link>
               </div>
-            ) : (
-              <div className="groupHeader">
-                <div className="groupTitle">
-                  <Link to={`/assignment-group/${group.id}`}>
-                    <h3>{group.name} ({group.weight.toFixed(1)}%)</h3>
-                  </Link>
-                  <div className="groupActions">
-                    <button onClick={() => {
-                      setEditingGroupId(group.id);
-                      setEditingGroupName(group.name);
-                    }} className="editButton">
-                      Edit
-                    </button>
-                    <button onClick={() => deleteAssignmentGroup(group.id)} className="deleteButton">
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
+            </div>
             {group.assignments.length > 0 ? (
               group.assignments.map((assignment) => (
                 <div key={assignment.id} className="assignmentRow">
-                  {editingAssignmentId === assignment.id ? (
-                    <div className="editAssignmentSection">
-                      <input
-                        type="text"
-                        value={editingAssignmentName}
-                        onChange={(e) => setEditingAssignmentName(e.target.value)}
-                        placeholder="Assignment name"
-                      />
-                      <button onClick={() => updateAssignment(assignment.id)} className="saveButton">
-                        Save
-                      </button>
-                      <button onClick={() => setEditingAssignmentId(null)} className="cancelButton">
-                        Cancel
+                  <div className="assignmentItem">
+                    <Link to={`/assignment/${assignment.id}`}>
+                      <span className="assignmentName">{assignment.name}</span>
+                      <span className="assignmentGrade">
+                        Grade: {assignment.percentageGrade.toFixed(1)}%
+                      </span>
+                    </Link>
+                    <div className="assignmentActions">
+                      <button onClick={() => deleteAssignment(assignment.id)} className="deleteButton">
+                        Delete
                       </button>
                     </div>
-                  ) : (
-                    <div className="assignmentItem">
-                      <Link to={`/assignment/${assignment.id}`}>
-                        <span className="assignmentName">{assignment.name}</span>
-                        <span className="assignmentGrade">
-                          Grade: {assignment.percentageGrade.toFixed(1)}%
-                        </span>
-                      </Link>
-                      <div className="assignmentActions">
-                        <button onClick={() => {
-                          setEditingAssignmentId(assignment.id);
-                          setEditingAssignmentName(assignment.name);
-                        }} className="editButton">
-                          Edit
-                        </button>
-                        <button onClick={() => deleteAssignment(assignment.id)} className="deleteButton">
-                          Delete
-                        </button>
-                      </div>
-                    </div>
-                  )}
+                  </div>
                 </div>
               ))
             ) : (

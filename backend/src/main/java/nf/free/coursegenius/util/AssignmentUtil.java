@@ -297,4 +297,20 @@ public class AssignmentUtil {
             throw new ApiException("Failed to delete assignment group: " + e.getMessage(), 500);
         }
     }
+
+    public static void updateAssignmentGroup(int groupId, String name, BigDecimal weight) {
+        String sql = "UPDATE assignment_group SET name = ?, weight = ? WHERE id = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, name);
+            stmt.setBigDecimal(2, weight);
+            stmt.setInt(3, groupId);
+            int rowsAffected = stmt.executeUpdate();
+            if (rowsAffected == 0) {
+                throw new ApiException("Assignment group not found", 404);
+            }
+        } catch (SQLException e) {
+            throw new ApiException("Failed to update assignment group: " + e.getMessage(), 500);
+        }
+    }
 }

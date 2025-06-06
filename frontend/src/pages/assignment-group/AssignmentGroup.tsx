@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 
 import "./AssignmentGroup.css";
 
@@ -27,6 +27,10 @@ const AssignmentGroup: React.FC = () => {
   const [assignmentName, setAssignmentName] = useState("");
   const [pointsEarned, setPointsEarned] = useState("");
   const [pointsPossible, setPointsPossible] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedName, setEditedName] = useState("");
+  const [editedWeight, setEditedWeight] = useState("");
+  const navigate = useNavigate();
 
   const apiDomain = process.env.REACT_APP_API_DOMAIN;
 
@@ -46,6 +50,8 @@ const AssignmentGroup: React.FC = () => {
         if (response.ok) {
           const data = await response.json();
           setGroup(data.assignmentGroup);
+          setEditedName(data.assignmentGroup.name);
+          setEditedWeight(data.assignmentGroup.weight.toString());
         } else {
           const errorData = await response.json();
           setError(errorData.message || "Failed to fetch assignment group");
@@ -56,6 +62,65 @@ const AssignmentGroup: React.FC = () => {
     };
     fetchGroup();
   }, [groupId]);
+
+  const updateGroup = async () => {
+    if (!editedName || !editedWeight) {
+      setError("Please fill in all fields");
+      return;
+    }
+
+    try {
+      const response = await fetch(`${apiDomain}/assignment/update-assignment-group`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          groupId,
+          name: editedName,
+          weight: Number(editedWeight)
+        }),
+      });
+
+      if (response.ok) {
+        // Refresh the group data
+        window.location.reload();
+      } else {
+        const errorData = await response.json();
+        setError(errorData.message || "Failed to update assignment group");
+      }
+    } catch (error) {
+      setError("Error updating assignment group");
+    }
+  };
+
+  const deleteGroup = async () => {
+    if (!window.confirm("Are you sure you want to delete this assignment group? This will also delete all assignments in the group.")) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`${apiDomain}/assignment/delete-assignment-group`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: "include",
+        body: JSON.stringify({ groupId: Number(groupId) }),
+      });
+
+      if (response.ok) {
+        // Redirect back to course
+        navigate(`/course/${group?.courseId}`);
+      } else {
+        const errorData = await response.json();
+        setError(errorData.message || "Failed to delete assignment group");
+      }
+    } catch (error) {
+      setError("Error deleting assignment group");
+    }
+  };
 
   const addAssignment = async () => {
     if (!assignmentName || !pointsEarned || !pointsPossible) {
@@ -101,8 +166,43 @@ const AssignmentGroup: React.FC = () => {
   return (
     <div className="assignmentGroupContainer">
       <div className="groupHeader">
-        <h1>{group.name}</h1>
-        <p>Weight: {group.weight.toFixed(1)}%</p>
+        {isEditing ? (
+          <div className="editGroupSection">
+            <input
+              type="text"
+              value={editedName}
+              onChange={(e) => setEditedName(e.target.value)}
+              placeholder="Group name"
+            />
+            <input
+              type="number"
+              value={editedWeight}
+              onChange={(e) => setEditedWeight(e.target.value)}
+              placeholder="Weight"
+              min="0"
+              step="0.1"
+            />
+            <button onClick={updateGroup} className="saveButton">
+              Save
+            </button>
+            <button onClick={() => setIsEditing(false)} className="cancelButton">
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <>
+            <h1>{group.name}</h1>
+            <p>Weight: {group.weight.toFixed(1)}%</p>
+            <div className="groupActions">
+              <button onClick={() => setIsEditing(true)} className="editButton">
+                Edit Group
+              </button>
+              <button onClick={deleteGroup} className="deleteButton">
+                Delete Group
+              </button>
+            </div>
+          </>
+        )}
       </div>
 
       <div className="assignmentsList">
