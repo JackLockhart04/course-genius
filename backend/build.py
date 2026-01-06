@@ -30,7 +30,7 @@ def build_on_pc():
             os.remove(os.path.join('package', file)) # Remove the .whl after extracting
 
     # 4. Copy your code & Zip
-    shutil.copy("main.py", "package/main.py")
+    shutil.copytree("app", "package/app")
     with zipfile.ZipFile("deployment.zip", "w", zipfile.ZIP_DEFLATED) as z:
         for root, _, files in os.walk("package"):
             for f in files:
