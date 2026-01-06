@@ -1,0 +1,31 @@
+.loginContainer {
+  display: flex;
+  flex-grow: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: #121212; /* Match the dark background color */
+  color: #ffffff; /* Light text color for contrast */
+  padding: 20px;
+}
+
+.loginHeader {
+  font-size: 2rem;
+  margin-bottom: 20px;
+  color: #ffffff; /* Light text color for contrast */
+}
+
+.loginButton {
+  padding: 10px 20px;
+  font-size: 1rem;
+  color: #ffffff; /* Light text color for contrast */
+  background-color: #007bff; /* Blue background color */
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.loginButton:hover {
+  background-color: #0056b3; /* Darker blue on hover */
+}
