@@ -1,4 +1,5 @@
 import React from "react";
+import { Button } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import { useUser } from "../context/UserContext";
@@ -17,7 +18,16 @@ const LogoutButton: React.FC = () => {
     }
   };
 
-  return <button onClick={handleLogout}>Logout</button>;
+  return (
+    <Button
+      variant="outlined"
+      color="secondary"
+      onClick={handleLogout}
+      size="large"
+    >
+      Logout
+    </Button>
+  );
 };
 
 export default LogoutButton;

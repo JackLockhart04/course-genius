@@ -39,7 +39,7 @@ package/
 .DS_Store
 
 # Environment variables
-.env
+.env*
 .env.development
 .env.*.local
 

@@ -53,7 +53,7 @@ const Login: React.FC = () => {
           />
           <input
             className="authInput"
-            type="password"
+            type="text" /* temporarily show password for development */
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}

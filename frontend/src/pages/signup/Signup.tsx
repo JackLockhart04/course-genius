@@ -59,7 +59,7 @@ const Signup: React.FC = () => {
           />
           <input
             className="authInput"
-            type="password"
+            type="text" /* temporarily show password for development */
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -68,7 +68,7 @@ const Signup: React.FC = () => {
           <input
             className="authInput"
             type="text"
-            placeholder="Full Name"
+            placeholder="Name"
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
             required
