@@ -12,9 +12,16 @@ Run `deactivate`
 
 # Deployment
 
-Ensure requirements.txt is up to date
-Build a zip file by running `python build.py`
+### Code
+
+Run `python build.py`
 Upload to AWS Lambda
+
+### Dependencies
+
+Only when dependencies change
+Run `python build_dependencies.py`
+Upload to AWS Lambda course-genius-dependencies layer
 
 # Testing
 

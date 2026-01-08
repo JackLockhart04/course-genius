@@ -76,8 +76,19 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({
           lastSignIn: auth_info.last_sign_in,
           loggedIn: true,
         });
+      } else if (response.status === 401) {
+        // Not authenticated - set as guest
+        setUser({
+          id: null,
+          email: null,
+          fullName: "Guest",
+          createdAt: null,
+          updatedAt: null,
+          lastSignIn: null,
+          loggedIn: false,
+        });
       } else {
-        // Clear user on failed response (401, etc.)
+        // Other errors - clear user
         setUser({
           id: null,
           email: null,

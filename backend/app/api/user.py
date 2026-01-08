@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from app.core.db import supabase_admin
 from app.core.auth import get_current_user
 from postgrest.exceptions import APIError
@@ -7,22 +7,9 @@ router = APIRouter(prefix="/user", redirect_slashes=False)
 
 @router.get("/me")
 async def get_my_profile(user = Depends(get_current_user)):
-    # If no user is authenticated, return guest info
+    # If no user is authenticated, return 401
     if user is None:
-        return {
-            "auth_info": {
-                "email": None,
-                "last_sign_in": None
-            },
-            "profile": {
-                "id": None,
-                "full_name": "Guest",
-                "email": None,
-                "created_at": None,
-                "updated_at": None
-            },
-            "is_guest": True
-        }
+        raise HTTPException(status_code=401, detail="Not authenticated")
     
     # User is authenticated - fetch their profile
     try:
@@ -46,5 +33,5 @@ async def get_my_profile(user = Depends(get_current_user)):
             "last_sign_in": user.last_sign_in_at
         },
         "profile": profile,
-        "is_guest": False
+        "logged_in": True,
     }

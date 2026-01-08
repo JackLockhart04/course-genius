@@ -1,212 +1,288 @@
-import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useUser } from "../../context/UserContext";
-import "./Dashboard.css";
+import { supabase } from "../../supabaseClient";
+import {
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Chip,
+  Collapse,
+  Container,
+  IconButton,
+  TextField,
+  Typography,
+  Stack,
+} from "@mui/material";
 
 interface Course {
-  id: number;
-  userId: number;
+  id: string;
   name: string;
-  creditHours: number;
-  gpa: number | null;
-  assignmentGroups: AssignmentGroup[];
-}
-
-interface AssignmentGroup {
-  id: number;
-  name: string;
-  weight: number;
-  assignments: Assignment[];
-}
-
-interface Assignment {
-  id: number;
-  name: string;
-  pointsEarned: number;
-  pointsPossible: number;
-  percentageGrade: number;
+  credits: number;
+  semester?: string;
+  color_code?: string;
+  created_at: string;
 }
 
 const Dashboard: React.FC = () => {
+  const navigate = useNavigate();
   const { user, loading } = useUser();
   const [courses, setCourses] = useState<Course[]>([]);
   const [loadingCourses, setLoadingCourses] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [name, setName] = useState("");
+  const [credits, setCredits] = useState("3.0");
+  const [semester, setSemester] = useState("");
+  const [colorCode, setColorCode] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   const apiDomain = process.env.REACT_APP_API_DOMAIN;
 
-  // Calculate course grade based on assignment groups and their weights
-  const calculateCourseGrade = (course: Course): number => {
-    let totalGrade = 0;
-    let totalWeight = 0;
+  const getCourses = async () => {
+    setLoadingCourses(true);
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token || "";
 
-    course.assignmentGroups.forEach(group => {
-      if (group.assignments.length > 0) {
-        // Get the average grade for this group
-        const groupGrade = group.assignments.reduce((sum, assignment) => sum + assignment.percentageGrade, 0) / group.assignments.length;
-        
-        // Add weighted grade (group grade * weight percentage)
-        totalGrade += groupGrade * (group.weight / 100);
-        totalWeight += group.weight / 100;
+      const response = await fetch(`${apiDomain}/courses/`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setCourses(data);
       }
-    });
-
-    // Return the weighted average
-    return totalWeight > 0 ? totalGrade : 0;
+    } catch (error) {
+      console.error("Error fetching courses:", error);
+    } finally {
+      setLoadingCourses(false);
+    }
   };
 
-  useEffect(() => {
-    if (!user.loggedIn) {
-      return;
-    }
-    // Fetch data
-    const fetchCourses = async () => {
-      try {
-        const response = await fetch(`${apiDomain}/course/get-courses`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include", // Include cookies in the request
-        });
-        // Good response
-        if (response.ok) {
-          const responseData = await response.json();
-          if (responseData) {
-            setCourses(responseData.courses);
-            setLoadingCourses(false);
-          }
-        }
-      } catch (error) {
-        // Handle errors
-        setError("Error fetching courses");
-      }
-    };
-
-    // Call
-    fetchCourses();
-  }, [user, apiDomain]);
-
-  // Add course function
-  const addCourse = async () => {
-    // Get course name from input field
-    const courseName = (
-      document.getElementById("addCourseName") as HTMLInputElement
-    ).value;
-    const creditHoursInput = (
-      document.getElementById("addCourseCreditHours") as HTMLInputElement
-    ).value;
-    const gpaInput = (
-      document.getElementById("addCourseGpa") as HTMLInputElement
-    ).value;
-
-    // Validation
-    if (courseName === "") {
-      setError("Course name cannot be empty");
-      return;
-    }
-    if (courseName.length > 50) {
-      setError("Course name cannot be longer than 50 characters");
-      return;
-    }
-
-    // Convert credit hours to number, default to 0 if empty or invalid
-    const creditHours = creditHoursInput ? Number(creditHoursInput) : 0;
-
-    // Fetch
+  const createCourse = async () => {
+    setSubmitting(true);
     try {
-      // Send request to add course
-      const response = await fetch(`${apiDomain}/course/add-course`, {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token || "";
+
+      const response = await fetch(`${apiDomain}/courses/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
-        credentials: "include",
-        body: JSON.stringify({ 
-          courseName: courseName,
-          creditHours: creditHours,
-          gpa: gpaInput ? Number(gpaInput) : null
+        body: JSON.stringify({
+          name,
+          credits: parseFloat(credits),
+          semester: semester || undefined,
+          color_code: colorCode || undefined,
         }),
       });
 
-      // Bad response
-      if (!response.ok) {
-        setError("Failed to add course");
+      if (response.ok) {
+        // Reset form and refresh courses
+        setName("");
+        setCredits("3.0");
+        setSemester("");
+        setColorCode("");
+        setShowAddForm(false);
+        await getCourses();
       }
-
-      // Good response
-      const responseData = await response.json();
-      // Good response but course not added
-      if (response.status !== 200) {
-        // Course already exists
-        if (response.status === 409) {
-          setError("Course already exists");
-          return;
-        }
-        // Other error
-        setError("Failed to add course");
-        return;
-      }
-
-      // Course added successfully
-      const courseData = responseData.data;
-      setCourses([...courses, courseData]);
-      // Reload courses by redirecting to dashboard
-      window.location.href = "/dashboard";
     } catch (error) {
-      // Fetch error
-      setError("Error adding course");
+      console.error("Error creating course:", error);
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  // Only show logged in users
+  useEffect(() => {
+    if (user.loggedIn) {
+      getCourses();
+    }
+  }, [user.loggedIn]);
+
   if (loading) {
     return (
-      <div className="dashboardContainer">
-        <div className="message">Loading...</div>
-      </div>
+      <Container maxWidth="md" sx={{ py: 6 }}>
+        <Typography variant="body1" color="text.secondary">
+          Loading...
+        </Typography>
+      </Container>
     );
   }
 
   if (!user.loggedIn) {
     return (
-      <div className="dashboardContainer">
-        <div className="message">You need to log in to view this page</div>
-      </div>
-    );
-  }
-
-  if (loadingCourses) {
-    return (
-      <div className="dashboardContainer">
-        <div className="message">Loading courses...</div>
-      </div>
+      <Container maxWidth="md" sx={{ py: 6 }}>
+        <Typography variant="body1" color="text.secondary">
+          You need to log in to view this page
+        </Typography>
+      </Container>
     );
   }
 
   return (
-    <div className="dashboardContainer">
-      <h1>Dashboard</h1>
-      {courses.map((course) => (
-        <div key={course.id} className="courseRow">
-          <Link to={`/course/${course.id}`} className="courseItem">
-            <div className="courseInfo">
-              <h3>{course.name}</h3>
-              <p>Grade: {calculateCourseGrade(course).toFixed(1)}%</p>
-              <p>GPA: {course.gpa !== null && course.gpa !== undefined ? course.gpa.toFixed(2) : 'N/A'}</p>
-              <p>Credit Hours: {course.creditHours}</p>
-            </div>
-          </Link>
-        </div>
-      ))}
-      <div className="courseRow" id="addCourse">
-        <input id="addCourseName" type="text" placeholder="Course name" />
-        <input id="addCourseCreditHours" type="number" placeholder="Credit hours" min="0" step="0.5" />
-        <input id="addCourseGpa" type="number" placeholder="GPA" min="0" step="0.1" />
-        <button onClick={addCourse}>Add course</button>
-      </div>
-      {error && <div className="error">{error}</div>}
-    </div>
+    <Container maxWidth="lg" sx={{ py: 6 }}>
+      <Box
+        display="flex"
+        justifyContent="space-between"
+        alignItems="center"
+        mb={4}
+      >
+        <Box>
+          <Typography variant="h3" component="h1" gutterBottom>
+            My Courses
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Welcome back, {user.fullName || user.email}!
+          </Typography>
+        </Box>
+      </Box>
+
+      {loadingCourses ? (
+        <Typography variant="body1" color="text.secondary">
+          Loading courses...
+        </Typography>
+      ) : courses.length === 0 ? (
+        <Card sx={{ p: 4, textAlign: "center", bgcolor: "background.paper" }}>
+          <Typography variant="h6" gutterBottom>
+            No courses yet
+          </Typography>
+          <Typography variant="body2" color="text.secondary" mb={2}>
+            Get started by adding your first course
+          </Typography>
+        </Card>
+      ) : (
+        <Box
+          display="grid"
+          gap={3}
+          gridTemplateColumns={{
+            xs: "1fr",
+            sm: "repeat(2, 1fr)",
+            md: "repeat(3, 1fr)",
+          }}
+        >
+          {courses.map((course) => (
+            <Card
+              key={course.id}
+              onClick={() => navigate(`/courses/${course.id}`)}
+              sx={{
+                height: "100%",
+                bgcolor: "background.paper",
+                borderLeft: course.color_code
+                  ? `4px solid ${course.color_code}`
+                  : undefined,
+                transition: "transform 0.2s, box-shadow 0.2s",
+                cursor: "pointer",
+                "&:hover": {
+                  transform: "translateY(-4px)",
+                  boxShadow: 6,
+                },
+              }}
+            >
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  {course.name}
+                </Typography>
+                <Stack spacing={1}>
+                  <Box display="flex" gap={1} flexWrap="wrap">
+                    <Chip label={`${course.credits} credits`} size="small" />
+                    {course.semester && (
+                      <Chip
+                        label={course.semester}
+                        size="small"
+                        variant="outlined"
+                      />
+                    )}
+                  </Box>
+                  <Typography variant="caption" color="text.secondary">
+                    Added {new Date(course.created_at).toLocaleDateString()}
+                  </Typography>
+                </Stack>
+              </CardContent>
+            </Card>
+          ))}
+        </Box>
+      )}
+
+      <Box mt={4}>
+        <Collapse in={showAddForm}>
+          <Card sx={{ p: 3, mb: 2, bgcolor: "background.paper" }}>
+            <Box
+              display="flex"
+              justifyContent="space-between"
+              alignItems="center"
+              mb={2}
+            >
+              <Typography variant="h6">Add New Course</Typography>
+              <IconButton onClick={() => setShowAddForm(false)} size="small">
+                ✕
+              </IconButton>
+            </Box>
+            <Stack spacing={2}>
+              <TextField
+                label="Course Name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                fullWidth
+                required
+              />
+              <TextField
+                label="Credits"
+                type="number"
+                value={credits}
+                onChange={(e) => setCredits(e.target.value)}
+                fullWidth
+                inputProps={{ step: "0.5", min: "0" }}
+              />
+              <TextField
+                label="Semester (optional)"
+                value={semester}
+                onChange={(e) => setSemester(e.target.value)}
+                fullWidth
+                placeholder="e.g., Spring 2024"
+              />
+              <TextField
+                label="Color Code (optional)"
+                value={colorCode}
+                onChange={(e) => setColorCode(e.target.value)}
+                fullWidth
+                placeholder="#3b82f6"
+              />
+              <Button
+                variant="contained"
+                onClick={createCourse}
+                disabled={!name || submitting}
+                fullWidth
+                size="large"
+              >
+                {submitting ? "Adding..." : "Add Course"}
+              </Button>
+            </Stack>
+          </Card>
+        </Collapse>
+
+        {!showAddForm && (
+          <Button
+            variant="contained"
+            onClick={() => setShowAddForm(true)}
+            fullWidth
+            size="large"
+          >
+            + Add New Course
+          </Button>
+        )}
+      </Box>
+    </Container>
   );
 };
 
