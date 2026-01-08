@@ -6,6 +6,9 @@ import { useUser } from "../../context/UserContext";
 const Account: React.FC = () => {
   const { user, loading } = useUser();
 
+  // User data is already fetched by UserContext on mount
+  // No need to refresh again here
+
   return (
     <div className="accountContainer">
       <h1 className="accountHeader">Account</h1>
@@ -14,13 +17,22 @@ const Account: React.FC = () => {
       ) : user.email ? (
         <div className="userInfo">
           <p>
-            <strong>Username:</strong> {user.username}
+            <strong>User ID:</strong> {user.id}
+          </p>
+          <p>
+            <strong>Full Name:</strong> {user.fullName}
           </p>
           <p>
             <strong>Email:</strong> {user.email}
           </p>
           <p>
-            <strong>User ID:</strong> {user.id}
+            <strong>Last Sign In:</strong> {user.lastSignIn ?? "N/A"}
+          </p>
+          <p>
+            <strong>Account Created:</strong> {user.createdAt ?? "N/A"}
+          </p>
+          <p>
+            <strong>Last Updated:</strong> {user.updatedAt ?? "N/A"}
           </p>
         </div>
       ) : (

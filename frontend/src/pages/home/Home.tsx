@@ -1,14 +1,8 @@
 import "./Home.css";
-
 import { useUser } from "../../context/UserContext";
+import LogoutButton from "../../components/LogoutButton";
 
 const Home: React.FC = () => {
-  const apiDomain = process.env.REACT_APP_API_DOMAIN;
-
-  const login = () => {
-    window.location.href = apiDomain + "/auth/login";
-  };
-
   const { user, loading } = useUser();
 
   return (
@@ -20,13 +14,15 @@ const Home: React.FC = () => {
         {loading ? (
           <p>Loading...</p>
         ) : user.email ? (
-          <p>Logged in as: {user.email}</p>
+          <div>
+            <p>Logged in as: {user.email}</p>
+            <LogoutButton />
+          </div>
         ) : (
           <p>Not logged in</p>
         )}
-
-        <button onClick={login}>Login with Microsoft</button>
       </header>
+      {/* Signup flow moved to dedicated page */}
       <section className="homeContent">
         <div className="homeFeature">
           <h2>Track Assignments</h2>

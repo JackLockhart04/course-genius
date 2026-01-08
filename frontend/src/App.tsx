@@ -12,6 +12,7 @@ import Navbar from "./components/navbar/Navbar";
 // import ScrollToTop from "./components/scrollToTop/ScrollToTop";
 import Home from "./pages/home/Home";
 import Login from "./pages/login/Login";
+import Signup from "./pages/signup/Signup";
 import Account from "./pages/account/Account";
 import Dashboard from "./pages/dashboard/Dashboard";
 import PrivacyPolicy from "./pages/legal/PrivacyPolicy";
@@ -36,6 +37,7 @@ const App: React.FC = () => {
               <Routes>
                 <Route path="/" element={<Home />} />
                 <Route path="/login" element={<Login />} />
+                <Route path="/signup" element={<Signup />} />
                 <Route path="/account" element={<Account />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/privacy" element={<PrivacyPolicy />} />

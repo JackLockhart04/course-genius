@@ -1,40 +1,55 @@
 import os, shutil, subprocess, zipfile
 
-# CONFIG: Change ARCH to 'aarch64' if your Lambda is ARM64
+# CONFIG: Match your Lambda 'Runtime settings'
 ARCH = "x86_64" 
-PYTHON_VER = "314" # 314 for Python 3.14
+PYTHON_VER = "312" # For python 3.12
+# Use manylinux2014 or manylinux_2_17 for broader compatibility
+PLATFORM = f"manylinux2014_{ARCH}" 
 
 def build_on_pc():
-    # 1. Clean up
     if os.path.exists('package'): shutil.rmtree('package')
     os.makedirs('package')
 
-    # 2. Download the EXACT Linux wheels
-    print(f"--- Downloading Linux Wheels for {ARCH} ---")
+    print(f"--- Downloading Linux Wheels for {PLATFORM} ---")
+    
+    # We use 'pip install' with --platform because it is more reliable than 'download' 
+    # for resolving the sub-dependencies of Pydantic.
     subprocess.run([
-        "pip", "download",
-        "--platform", f"manylinux2014_{ARCH}",
-        "--only-binary=:all:",
-        "--dest", "package",
-        "--python-version", PYTHON_VER,
+        "pip", "install",
+        "--platform", PLATFORM,
+        "--target", "package",
         "--implementation", "cp",
+        "--python-version", PYTHON_VER,
+        "--only-binary=:all:",
+        "--upgrade",
         "-r", "requirements.txt"
     ], check=True)
 
-    # 3. UNZIP the wheels into the package folder
-    print("--- Unpacking Wheels ---")
-    for file in os.listdir('package'):
-        if file.endswith(".whl"):
-            with zipfile.ZipFile(os.path.join('package', file), 'r') as wheel:
-                wheel.extractall('package')
-            os.remove(os.path.join('package', file)) # Remove the .whl after extracting
+    # NEW: Safety check for pydantic_core
+    core_path = os.path.join("package", "pydantic_core")
+    if os.path.exists(core_path):
+        # Look for the .so file to ensure it's Linux, not .pyd (Windows)
+        has_so = any(f.endswith(".so") for f in os.listdir(core_path))
+        if not has_so:
+            print("WARNING: No Linux binary (.so) found in pydantic_core. Fixing...")
+            # Force a targeted download of the core binary
+            subprocess.run([
+                "pip", "install", "--platform", PLATFORM, "--target", "package",
+                "--implementation", "cp", "--python-version", PYTHON_VER,
+                "--only-binary=:all:", "--upgrade", "pydantic-core"
+            ], check=True)
 
-    # 4. Copy your code & Zip
-    shutil.copytree("app", "package/app")
+    print("--- Copying Application Code ---")
+    # Ensure __init__.py exists in app folder
+    if not os.path.exists("app/__init__.py"):
+        with open("app/__init__.py", "w") as f: pass
+        
+    shutil.copytree('app', 'package/app', dirs_exist_ok=True)
+
+    # 5. Create Zip
     with zipfile.ZipFile("deployment.zip", "w", zipfile.ZIP_DEFLATED) as z:
         for root, _, files in os.walk("package"):
             for f in files:
-                # Skip unnecessary metadata to keep it under 10MB
                 if ".dist-info" in root or "__pycache__" in root: continue
                 path = os.path.join(root, f)
                 z.write(path, os.path.relpath(path, "package"))
