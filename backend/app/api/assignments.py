@@ -22,6 +22,37 @@ async def get_course_assignments(course_id: str, request: Request, user = Depend
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+# GET: Fetch a specific assignment by its ID
+@router.get("/{course_id}/assignments/{assignment_id}", response_model=AssignmentResponse)
+async def get_assignment(
+    course_id: str,
+    assignment_id: str,
+    request: Request,
+    user = Depends(get_current_user)
+):
+    try:
+        # 1. Auth Handoff
+        auth_header = request.headers.get("Authorization")
+        token = auth_header.split(" ")[1]
+        supabase.postgrest.auth(token)
+
+        # 2. Query for the specific assignment
+        # We check course_id, assignment_id, and user_id for maximum security
+        response = supabase.table("assignments")\
+            .select("*")\
+            .eq("id", assignment_id)\
+            .eq("course_id", course_id)\
+            .eq("user_id", user.id)\
+            .maybe_single()\
+            .execute()
+            
+        if not response.data:
+            raise HTTPException(status_code=404, detail="Assignment not found")
+            
+        return response.data
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 # POST a new assignment
 @router.post("/{course_id}/assignments", response_model=AssignmentResponse)
 async def create_assignment(course_id: str, request: Request, assignment: AssignmentCreate, user = Depends(get_current_user)):

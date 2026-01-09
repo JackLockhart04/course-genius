@@ -7,6 +7,7 @@ import {
   Button,
   Card,
   CardContent,
+  CardActionArea,
   Chip,
   Collapse,
   Container,
@@ -32,6 +33,7 @@ interface Assignment {
   max_score?: number;
   due_date?: string;
   created_at: string;
+  score_achieved?: number | null;
 }
 
 const Course: React.FC = () => {
@@ -42,6 +44,12 @@ const Course: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [submittingEdit, setSubmittingEdit] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editCredits, setEditCredits] = useState("");
+  const [editSemester, setEditSemester] = useState("");
+  const [editColorCode, setEditColorCode] = useState("");
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loadingAssignments, setLoadingAssignments] = useState(false);
   const [showAddAssignment, setShowAddAssignment] = useState(false);
@@ -52,6 +60,11 @@ const Course: React.FC = () => {
   const [submittingAssignment, setSubmittingAssignment] = useState(false);
 
   const apiDomain = process.env.REACT_APP_API_DOMAIN;
+
+  const handleAssignmentClick = (assignmentId: string) => {
+    if (!id) return;
+    navigate(`/courses/${id}/assignments/${assignmentId}`);
+  };
 
   const getAssignments = async () => {
     if (!id) return;
@@ -78,6 +91,58 @@ const Course: React.FC = () => {
       console.error("Error fetching assignments:", err);
     } finally {
       setLoadingAssignments(false);
+    }
+  };
+
+  const updateCourse = async () => {
+    setSubmittingEdit(true);
+    try {
+      const payload: Record<string, unknown> = {};
+      if (editName.trim().length > 0) {
+        payload.name = editName.trim();
+      }
+      if (editCredits !== "") {
+        payload.credits = parseFloat(editCredits);
+      }
+      if (editSemester !== "") {
+        payload.semester = editSemester.trim();
+      }
+      if (editColorCode !== "") {
+        payload.color_code = editColorCode.trim();
+      }
+
+      if (Object.keys(payload).length === 0) {
+        setSubmittingEdit(false);
+        setEditing(false);
+        return;
+      }
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token || "";
+
+      const response = await fetch(`${apiDomain}/courses/${id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setCourse(data);
+        setEditing(false);
+      } else {
+        setError("Failed to update course");
+      }
+    } catch (err) {
+      console.error("Error updating course:", err);
+      setError("Failed to update course");
+    } finally {
+      setSubmittingEdit(false);
     }
   };
 
@@ -272,15 +337,69 @@ const Course: React.FC = () => {
       >
         <Stack spacing={3}>
           <Box>
-            <Typography variant="h3" component="h1" gutterBottom>
-              {course.name}
-            </Typography>
-            <Box display="flex" gap={1} flexWrap="wrap" mt={2}>
-              <Typography variant="body2">{course.credits} credits</Typography>
-              {course.semester && (
-                <Typography variant="body2">{course.semester}</Typography>
-              )}
-            </Box>
+            <Collapse in={!editing}>
+              <Box>
+                <Typography variant="h3" component="h1" gutterBottom>
+                  {course.name}
+                </Typography>
+                <Box display="flex" gap={1} flexWrap="wrap" mt={2}>
+                  <Typography variant="body2">
+                    {course.credits} credits
+                  </Typography>
+                  {course.semester && (
+                    <Typography variant="body2">{course.semester}</Typography>
+                  )}
+                </Box>
+              </Box>
+            </Collapse>
+            <Collapse in={editing}>
+              <Stack spacing={2} mb={2}>
+                <TextField
+                  label="Course Name"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  fullWidth
+                />
+                <TextField
+                  label="Credits"
+                  type="number"
+                  value={editCredits}
+                  onChange={(e) => setEditCredits(e.target.value)}
+                  fullWidth
+                  inputProps={{ step: "0.5", min: "0" }}
+                />
+                <TextField
+                  label="Semester"
+                  value={editSemester}
+                  onChange={(e) => setEditSemester(e.target.value)}
+                  fullWidth
+                />
+                <TextField
+                  label="Color Code (hex)"
+                  value={editColorCode}
+                  onChange={(e) => setEditColorCode(e.target.value)}
+                  fullWidth
+                  placeholder="#FF5733"
+                />
+                <Stack direction="row" gap={2}>
+                  <Button
+                    variant="contained"
+                    onClick={updateCourse}
+                    disabled={submittingEdit}
+                    sx={{ flex: 1 }}
+                  >
+                    {submittingEdit ? "Saving..." : "Save Changes"}
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    onClick={() => setEditing(false)}
+                    disabled={submittingEdit}
+                  >
+                    Cancel
+                  </Button>
+                </Stack>
+              </Stack>
+            </Collapse>
           </Box>
 
           <Box>
@@ -317,26 +436,35 @@ const Course: React.FC = () => {
                 {assignments.map((assignment) => (
                   <Card
                     key={assignment.id}
-                    sx={{ p: 2, bgcolor: "background.paper", height: "100%" }}
+                    sx={{ bgcolor: "background.paper", height: "100%" }}
                   >
-                    <Typography variant="subtitle2" gutterBottom>
-                      {assignment.title}
-                    </Typography>
-                    {assignment.max_score && (
-                      <Typography variant="caption" color="text.secondary">
-                        {assignment.weight ?? 0} / {assignment.max_score} points
+                    <CardActionArea
+                      onClick={() => handleAssignmentClick(assignment.id)}
+                      sx={{ p: 2, height: "100%", textAlign: "left" }}
+                    >
+                      <Typography variant="subtitle2" gutterBottom>
+                        {assignment.title}
                       </Typography>
-                    )}
-                    {assignment.due_date && (
-                      <Typography
-                        variant="caption"
-                        color="text.secondary"
-                        display="block"
-                      >
-                        Due:{" "}
-                        {new Date(assignment.due_date).toLocaleDateString()}
-                      </Typography>
-                    )}
+                      {assignment.max_score !== undefined && (
+                        <Typography variant="caption" color="text.secondary">
+                          {assignment.score_achieved !== null &&
+                          assignment.score_achieved !== undefined
+                            ? `${assignment.score_achieved} / ${assignment.max_score}`
+                            : "No grade"}{" "}
+                          {assignment.max_score > 0 ? "points" : ""}
+                        </Typography>
+                      )}
+                      {assignment.due_date && (
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          display="block"
+                        >
+                          Due:{" "}
+                          {new Date(assignment.due_date).toLocaleDateString()}
+                        </Typography>
+                      )}
+                    </CardActionArea>
                   </Card>
                 ))}
               </Box>
@@ -422,6 +550,20 @@ const Course: React.FC = () => {
             borderTop="1px solid"
             borderColor="divider"
           >
+            {!editing && (
+              <Button
+                variant="outlined"
+                onClick={() => {
+                  setEditName(course.name);
+                  setEditCredits(course.credits.toString());
+                  setEditSemester(course.semester || "");
+                  setEditColorCode(course.color_code || "");
+                  setEditing(true);
+                }}
+              >
+                Edit Course
+              </Button>
+            )}
             <Button
               variant="contained"
               color="error"

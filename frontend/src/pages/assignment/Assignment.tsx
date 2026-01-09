@@ -7,7 +7,6 @@ import {
   Button,
   Card,
   CardContent,
-  Chip,
   Collapse,
   Container,
   IconButton,
@@ -24,6 +23,7 @@ interface Assignment {
   due_date?: string;
   created_at: string;
   course_id: string;
+  score_achieved?: number | null;
 }
 
 const Assignment: React.FC = () => {
@@ -42,6 +42,7 @@ const Assignment: React.FC = () => {
   const [editName, setEditName] = useState("");
   const [editPointsEarned, setEditPointsEarned] = useState("");
   const [editPointsPossible, setEditPointsPossible] = useState("");
+  const [editWeight, setEditWeight] = useState("");
   const [editDueDate, setEditDueDate] = useState("");
 
   const apiDomain = process.env.REACT_APP_API_DOMAIN;
@@ -89,6 +90,29 @@ const Assignment: React.FC = () => {
   const updateAssignment = async () => {
     setSubmitting(true);
     try {
+      const payload: Record<string, unknown> = {};
+      if (editName.trim().length > 0) {
+        payload.title = editName.trim();
+      }
+      if (editPointsEarned !== "") {
+        payload.score_achieved = parseFloat(editPointsEarned);
+      }
+      if (editPointsPossible !== "") {
+        payload.max_score = parseFloat(editPointsPossible);
+      }
+      if (editWeight !== "") {
+        payload.weight = parseFloat(editWeight);
+      }
+      if (editDueDate) {
+        payload.due_date = editDueDate;
+      }
+
+      if (Object.keys(payload).length === 0) {
+        setSubmitting(false);
+        setEditing(false);
+        return;
+      }
+
       const {
         data: { session },
       } = await supabase.auth.getSession();
@@ -97,19 +121,12 @@ const Assignment: React.FC = () => {
       const response = await fetch(
         `${apiDomain}/courses/${courseId}/assignments/${assignmentId}`,
         {
-          method: "PUT",
+          method: "PATCH",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({
-            title: editName,
-            weight: editPointsEarned ? parseFloat(editPointsEarned) : undefined,
-            max_score: editPointsPossible
-              ? parseFloat(editPointsPossible)
-              : undefined,
-            due_date: editDueDate || undefined,
-          }),
+          body: JSON.stringify(payload),
         }
       );
 
@@ -154,9 +171,22 @@ const Assignment: React.FC = () => {
         if (response.ok) {
           const data = await response.json();
           setAssignment(data);
-          setEditName(data.name);
-          setEditPointsEarned(data.points_earned?.toString() || "");
-          setEditPointsPossible(data.points_possible?.toString() || "");
+          setEditName(data.title || "");
+          setEditPointsEarned(
+            data.score_achieved !== undefined && data.score_achieved !== null
+              ? data.score_achieved.toString()
+              : ""
+          );
+          setEditPointsPossible(
+            data.max_score !== undefined && data.max_score !== null
+              ? data.max_score.toString()
+              : ""
+          );
+          setEditWeight(
+            data.weight !== undefined && data.weight !== null
+              ? data.weight.toString()
+              : ""
+          );
           setEditDueDate(data.due_date || "");
         } else if (response.status === 404) {
           setError("Assignment not found");
@@ -226,8 +256,10 @@ const Assignment: React.FC = () => {
   }
 
   const percentage =
-    assignment.max_score && assignment.weight !== undefined
-      ? ((assignment.weight / assignment.max_score) * 100).toFixed(1)
+    assignment.max_score &&
+    assignment.score_achieved !== undefined &&
+    assignment.score_achieved !== null
+      ? ((assignment.score_achieved / assignment.max_score) * 100).toFixed(1)
       : null;
 
   return (
@@ -246,13 +278,41 @@ const Assignment: React.FC = () => {
             <Typography variant="h3" component="h1" gutterBottom>
               {assignment.title}
             </Typography>
-            {assignment.max_score && assignment.weight !== undefined && (
-              <Box display="flex" gap={2} mt={2}>
-                <Chip
-                  label={`${assignment.weight} / ${assignment.max_score} points`}
-                />
-                <Chip label={`${percentage}%`} />
-              </Box>
+            {assignment.max_score !== undefined && (
+              <Stack
+                direction="row"
+                spacing={1.5}
+                mt={2}
+                sx={{ flexWrap: "wrap" }}
+              >
+                <Box
+                  sx={{
+                    px: 1.5,
+                    py: 0.75,
+                    bgcolor: "action.selected",
+                    borderRadius: "999px",
+                  }}
+                >
+                  <Typography variant="body2">
+                    {assignment.score_achieved !== null &&
+                    assignment.score_achieved !== undefined
+                      ? `${assignment.score_achieved} / ${assignment.max_score} points`
+                      : "No grade"}
+                  </Typography>
+                </Box>
+                {percentage && (
+                  <Box
+                    sx={{
+                      px: 1.5,
+                      py: 0.75,
+                      bgcolor: "action.selected",
+                      borderRadius: "999px",
+                    }}
+                  >
+                    <Typography variant="body2">{percentage}%</Typography>
+                  </Box>
+                )}
+              </Stack>
             )}
           </Box>
 
@@ -280,7 +340,7 @@ const Assignment: React.FC = () => {
                   fullWidth
                 />
                 <TextField
-                  label="Weight"
+                  label="Score Achieved"
                   type="number"
                   value={editPointsEarned}
                   onChange={(e) => setEditPointsEarned(e.target.value)}
@@ -292,6 +352,14 @@ const Assignment: React.FC = () => {
                   type="number"
                   value={editPointsPossible}
                   onChange={(e) => setEditPointsPossible(e.target.value)}
+                  fullWidth
+                  inputProps={{ step: "0.1", min: "0" }}
+                />
+                <TextField
+                  label="Weight"
+                  type="number"
+                  value={editWeight}
+                  onChange={(e) => setEditWeight(e.target.value)}
                   fullWidth
                   inputProps={{ step: "0.1", min: "0" }}
                 />
@@ -331,7 +399,11 @@ const Assignment: React.FC = () => {
                 <Box>
                   {assignment.max_score !== undefined && (
                     <Typography variant="body2">
-                      Score: {assignment.weight ?? 0} /{assignment.max_score}
+                      Score:{" "}
+                      {assignment.score_achieved !== null &&
+                      assignment.score_achieved !== undefined
+                        ? `${assignment.score_achieved} / ${assignment.max_score}`
+                        : "No grade"}
                     </Typography>
                   )}
                   {assignment.due_date && (

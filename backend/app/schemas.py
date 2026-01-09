@@ -31,6 +31,12 @@ class CourseResponse(CourseCreate):
     id: str
     user_id: str
     created_at: str
+
+class CourseUpdate(BaseModel):
+    name: Optional[str] = None
+    credits: Optional[float] = None  # Matches DECIMAL in SQL
+    semester: Optional[str] = None
+    color_code: Optional[str] = None
     
 from pydantic import BaseModel, Field
 from typing import Optional

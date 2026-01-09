@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from app.schemas import CourseCreate, CourseResponse
+from app.schemas import CourseCreate, CourseResponse, CourseUpdate
 from app.core.auth import get_current_user
 from app.core.db import supabase # Your initialized client
 
 router = APIRouter(prefix="/courses", tags=["Courses"])
 
+# GET: Fetch all courses for the current user
 @router.get("/", response_model=list[CourseResponse])
 async def get_my_courses(
     request: Request, # Inject the request object
@@ -33,6 +34,44 @@ async def get_my_courses(
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to fetch courses: {str(e)}")
 
+# GET: Fetch a specific course by its ID
+@router.get("/{course_id}", response_model=CourseResponse)
+async def get_course(
+    course_id: str,  # Changed from int to str to support UUIDs
+    request: Request, 
+    user = Depends(get_current_user)
+):
+    try:
+        # 1. Auth Handoff
+        auth_header = request.headers.get("Authorization")
+        if not auth_header:
+            raise HTTPException(status_code=401, detail="Missing token")
+            
+        token = auth_header.split(" ")[1]
+        supabase.postgrest.auth(token)
+
+        # 2. Query for the specific course
+        # We filter by both the ID and the user_id for security
+        response = supabase.table("courses")\
+            .select("*")\
+            .eq("id", course_id)\
+            .eq("user_id", user.id)\
+            .maybe_single()\
+            .execute()
+            
+        # 3. Handle Result
+        if not response.data:
+            raise HTTPException(status_code=404, detail="Course not found")
+            
+        return response.data
+
+    except HTTPException as he:
+        # Re-raise HTTP exceptions so they don't get caught by the general Exception block
+        raise he
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+# POST: Create a new course
 @router.post("/", response_model=CourseResponse)
 async def create_new_course(
     request: Request, # Inject the request object
@@ -73,10 +112,12 @@ async def create_new_course(
         # doesn't match the token's UID or the RLS policy is misconfigured.
         raise HTTPException(status_code=400, detail=f"Failed to create course: {str(e)}")
 
-@router.get("/{course_id}", response_model=CourseResponse)
-async def get_course(
-    course_id: str,  # Changed from int to str to support UUIDs
-    request: Request, 
+# PATCH: Update a specific course by its ID
+@router.patch("/{course_id}", response_model=CourseResponse)
+async def update_course(
+    course_id: str,
+    request: Request,
+    updates: CourseUpdate,
     user = Depends(get_current_user)
 ):
     try:
@@ -88,27 +129,33 @@ async def get_course(
         token = auth_header.split(" ")[1]
         supabase.postgrest.auth(token)
 
-        # 2. Query for the specific course
-        # We filter by both the ID and the user_id for security
+        # 2. Extract only the fields that were actually sent in the request
+        # This prevents overwriting existing data with None values
+        update_data = updates.model_dump(exclude_unset=True)
+
+        if not update_data:
+            raise HTTPException(status_code=400, detail="No update data provided")
+
+        # 3. Execute the Update
+        # Filtering by both course_id and user_id ensures the user owns the course
         response = supabase.table("courses")\
-            .select("*")\
+            .update(update_data)\
             .eq("id", course_id)\
             .eq("user_id", user.id)\
-            .maybe_single()\
             .execute()
             
-        # 3. Handle Result
+        # 4. Handle Result
         if not response.data:
-            raise HTTPException(status_code=404, detail="Course not found")
+            raise HTTPException(status_code=404, detail="Course not found or unauthorized")
             
-        return response.data
+        return response.data[0]
 
     except HTTPException as he:
-        # Re-raise HTTP exceptions so they don't get caught by the general Exception block
         raise he
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
-    
+
+# DELETE: Delete a specific course by its ID
 @router.delete("/{course_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_course(
     course_id: str, 
