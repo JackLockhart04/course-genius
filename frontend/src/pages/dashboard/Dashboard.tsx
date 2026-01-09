@@ -23,6 +23,13 @@ interface Course {
   semester?: string;
   color_code?: string;
   created_at: string;
+  final_letter_grade?: string;
+  final_gpa?: number;
+}
+
+interface CourseStats {
+  current_avg: number;
+  weight_completed: number;
 }
 
 const Dashboard: React.FC = () => {
@@ -30,6 +37,7 @@ const Dashboard: React.FC = () => {
   const { user, loading } = useUser();
   const [courses, setCourses] = useState<Course[]>([]);
   const [loadingCourses, setLoadingCourses] = useState(true);
+  const [stats, setStats] = useState<Record<string, CourseStats>>({});
   const [showAddForm, setShowAddForm] = useState(false);
   const [name, setName] = useState("");
   const [credits, setCredits] = useState("3.0");
@@ -58,11 +66,42 @@ const Dashboard: React.FC = () => {
       if (response.ok) {
         const data = await response.json();
         setCourses(data);
+        // Fetch stats for each course
+        data.forEach((course: Course) => {
+          getStats(course.id);
+        });
       }
     } catch (error) {
       console.error("Error fetching courses:", error);
     } finally {
       setLoadingCourses(false);
+    }
+  };
+
+  const getStats = async (courseId: string) => {
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token || "";
+
+      const response = await fetch(`${apiDomain}/courses/${courseId}/stats`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setStats((prev) => ({
+          ...prev,
+          [courseId]: data,
+        }));
+      }
+    } catch (error) {
+      console.error("Error fetching stats:", error);
     }
   };
 
@@ -203,10 +242,39 @@ const Dashboard: React.FC = () => {
                         {course.semester}
                       </Typography>
                     )}
+                    {course.final_letter_grade && (
+                      <Typography variant="body2" fontSize="0.875rem">
+                        Grade: {course.final_letter_grade}
+                        {course.final_gpa &&
+                          ` (${course.final_gpa.toFixed(2)})`}
+                      </Typography>
+                    )}
                   </Box>
                   <Typography variant="caption" color="text.secondary">
                     Added {new Date(course.created_at).toLocaleDateString()}
                   </Typography>
+                  {stats[course.id] && (
+                    <Box
+                      sx={{
+                        mt: 1,
+                        pt: 1,
+                        borderTop: "1px solid",
+                        borderColor: "divider",
+                      }}
+                    >
+                      <Typography variant="caption" color="text.secondary">
+                        Average: {stats[course.id].current_avg.toFixed(2)}%
+                      </Typography>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        display="block"
+                      >
+                        Weight Completed:{" "}
+                        {stats[course.id].weight_completed.toFixed(2)}%
+                      </Typography>
+                    </Box>
+                  )}
                 </Stack>
               </CardContent>
             </Card>

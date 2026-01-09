@@ -24,6 +24,8 @@ interface Course {
   semester?: string;
   color_code?: string;
   created_at: string;
+  final_letter_grade?: string;
+  final_gpa?: number;
 }
 
 interface Assignment {
@@ -50,14 +52,22 @@ const Course: React.FC = () => {
   const [editCredits, setEditCredits] = useState("");
   const [editSemester, setEditSemester] = useState("");
   const [editColorCode, setEditColorCode] = useState("");
+  const [editLetterGrade, setEditLetterGrade] = useState("");
+  const [editGpa, setEditGpa] = useState("");
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loadingAssignments, setLoadingAssignments] = useState(false);
   const [showAddAssignment, setShowAddAssignment] = useState(false);
   const [assignmentName, setAssignmentName] = useState("");
   const [pointsEarned, setPointsEarned] = useState("");
   const [pointsPossible, setPointsPossible] = useState("");
+  const [scoreAchieved, setScoreAchieved] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [submittingAssignment, setSubmittingAssignment] = useState(false);
+  const [stats, setStats] = useState<{
+    current_avg: number;
+    weight_completed: number;
+  } | null>(null);
+  const [loadingStats, setLoadingStats] = useState(false);
 
   const apiDomain = process.env.REACT_APP_API_DOMAIN;
 
@@ -94,6 +104,34 @@ const Course: React.FC = () => {
     }
   };
 
+  const getStats = async () => {
+    if (!id) return;
+    setLoadingStats(true);
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token || "";
+
+      const response = await fetch(`${apiDomain}/courses/${id}/stats`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setStats(data);
+      }
+    } catch (err) {
+      console.error("Error fetching stats:", err);
+    } finally {
+      setLoadingStats(false);
+    }
+  };
+
   const updateCourse = async () => {
     setSubmittingEdit(true);
     try {
@@ -109,6 +147,12 @@ const Course: React.FC = () => {
       }
       if (editColorCode !== "") {
         payload.color_code = editColorCode.trim();
+      }
+      if (editLetterGrade !== "") {
+        payload.final_letter_grade = editLetterGrade.trim();
+      }
+      if (editGpa !== "") {
+        payload.final_gpa = parseFloat(editGpa);
       }
 
       if (Object.keys(payload).length === 0) {
@@ -166,6 +210,7 @@ const Course: React.FC = () => {
           title: assignmentName,
           weight: pointsEarned ? parseFloat(pointsEarned) : undefined,
           max_score: pointsPossible ? parseFloat(pointsPossible) : undefined,
+          score_achieved: scoreAchieved ? parseFloat(scoreAchieved) : undefined,
           due_date: dueDate || undefined,
         }),
       });
@@ -174,6 +219,7 @@ const Course: React.FC = () => {
         setAssignmentName("");
         setPointsEarned("");
         setPointsPossible("");
+        setScoreAchieved("");
         setDueDate("");
         setShowAddAssignment(false);
         await getAssignments();
@@ -248,6 +294,7 @@ const Course: React.FC = () => {
           // Fetch assignments after loading course
           setTimeout(() => {
             getAssignments();
+            getStats();
           }, 100);
         } else if (response.status === 404) {
           setError("Course not found");
@@ -349,6 +396,12 @@ const Course: React.FC = () => {
                   {course.semester && (
                     <Typography variant="body2">{course.semester}</Typography>
                   )}
+                  {course.final_letter_grade && (
+                    <Typography variant="body2">
+                      Grade: {course.final_letter_grade}
+                      {course.final_gpa && ` (${course.final_gpa.toFixed(2)})`}
+                    </Typography>
+                  )}
                 </Box>
               </Box>
             </Collapse>
@@ -381,6 +434,21 @@ const Course: React.FC = () => {
                   fullWidth
                   placeholder="#FF5733"
                 />
+                <TextField
+                  label="Final Letter Grade"
+                  value={editLetterGrade}
+                  onChange={(e) => setEditLetterGrade(e.target.value)}
+                  fullWidth
+                  placeholder="A, B+, Pass, etc."
+                />
+                <TextField
+                  label="Final GPA"
+                  type="number"
+                  value={editGpa}
+                  onChange={(e) => setEditGpa(e.target.value)}
+                  fullWidth
+                  inputProps={{ step: "0.1", min: "0", max: "4.0" }}
+                />
                 <Stack direction="row" gap={2}>
                   <Button
                     variant="contained"
@@ -410,6 +478,38 @@ const Course: React.FC = () => {
               Course ID: {course.id}
             </Typography>
           </Box>
+
+          {stats && (
+            <Card sx={{ p: 3, bgcolor: "background.default" }}>
+              <Typography variant="h6" gutterBottom>
+                Course Stats
+              </Typography>
+              {loadingStats ? (
+                <Typography variant="body2" color="text.secondary">
+                  Loading stats...
+                </Typography>
+              ) : (
+                <Stack spacing={2}>
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Current Average
+                    </Typography>
+                    <Typography variant="h5">
+                      {stats.current_avg.toFixed(2)}%
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Weight Completed
+                    </Typography>
+                    <Typography variant="h5">
+                      {stats.weight_completed.toFixed(2)}%
+                    </Typography>
+                  </Box>
+                </Stack>
+              )}
+            </Card>
+          )}
 
           <Card sx={{ p: 3, bgcolor: "background.default" }}>
             <Typography variant="h6" gutterBottom>
@@ -513,6 +613,14 @@ const Course: React.FC = () => {
                     inputProps={{ step: "0.1", min: "0" }}
                   />
                   <TextField
+                    label="Score Achieved (optional)"
+                    type="number"
+                    value={scoreAchieved}
+                    onChange={(e) => setScoreAchieved(e.target.value)}
+                    fullWidth
+                    inputProps={{ step: "0.1", min: "0" }}
+                  />
+                  <TextField
                     label="Due Date (optional)"
                     type="date"
                     value={dueDate}
@@ -558,6 +666,8 @@ const Course: React.FC = () => {
                   setEditCredits(course.credits.toString());
                   setEditSemester(course.semester || "");
                   setEditColorCode(course.color_code || "");
+                  setEditLetterGrade(course.final_letter_grade || "");
+                  setEditGpa(course.final_gpa?.toString() || "");
                   setEditing(true);
                 }}
               >

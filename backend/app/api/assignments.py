@@ -66,6 +66,7 @@ async def create_assignment(course_id: str, request: Request, assignment: Assign
             "title": assignment.title, # Using 'title' from schema
             "weight": assignment.weight,
             "max_score": assignment.max_score,
+            "score_achieved": assignment.score_achieved,
             "due_date": str(assignment.due_date) if assignment.due_date else None
         }
 
