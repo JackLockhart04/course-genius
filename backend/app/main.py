@@ -49,6 +49,8 @@ from app.api import test
 app.include_router(test.router)
 from app.api import courses
 app.include_router(courses.router)
+from app.api import assignments
+app.include_router(assignments.router)
 
 # Mangum handler for AWS Lambda
 handler = Mangum(app, lifespan="off")

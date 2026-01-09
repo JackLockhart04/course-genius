@@ -1,21 +1,16 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from app.schemas import AssignmentCreate, AssignmentResponse
+from app.schemas import AssignmentCreate, AssignmentResponse, AssignmentUpdate
 from app.core.auth import get_current_user
 from app.core.db import supabase
 from typing import List
 
-router = APIRouter(prefix="/assignments", tags=["Assignments"])
+router = APIRouter(prefix="/courses", tags=["Assignments"])
 
-# GET: List all assignments for a specific course
-@router.get("/course/{course_id}", response_model=List[AssignmentResponse])
-async def get_course_assignments(
-    course_id: str,
-    request: Request,
-    user = Depends(get_current_user)
-):
+# GET assignments for a specific course
+@router.get("/{course_id}/assignments", response_model=List[AssignmentResponse])
+async def get_course_assignments(course_id: str, request: Request, user = Depends(get_current_user)):
     try:
-        auth_header = request.headers.get("Authorization")
-        token = auth_header.split(" ")[1]
+        token = request.headers.get("Authorization").split(" ")[1]
         supabase.postgrest.auth(token)
 
         response = supabase.table("assignments")\
@@ -23,27 +18,21 @@ async def get_course_assignments(
             .eq("course_id", course_id)\
             .eq("user_id", user.id)\
             .execute()
-            
         return response.data
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-# POST: Create a new assignment
-@router.post("/", response_model=AssignmentResponse)
-async def create_assignment(
-    request: Request,
-    assignment: AssignmentCreate,
-    user = Depends(get_current_user)
-):
+# POST a new assignment
+@router.post("/{course_id}/assignments", response_model=AssignmentResponse)
+async def create_assignment(course_id: str, request: Request, assignment: AssignmentCreate, user = Depends(get_current_user)):
     try:
-        auth_header = request.headers.get("Authorization")
-        token = auth_header.split(" ")[1]
+        token = request.headers.get("Authorization").split(" ")[1]
         supabase.postgrest.auth(token)
 
         new_assignment = {
-            "course_id": str(assignment.course_id),
+            "course_id": course_id,
             "user_id": user.id,
-            "title": assignment.title,
+            "title": assignment.title, # Using 'title' from schema
             "weight": assignment.weight,
             "max_score": assignment.max_score,
             "due_date": str(assignment.due_date) if assignment.due_date else None
@@ -54,27 +43,40 @@ async def create_assignment(
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-# DELETE: Remove an assignment
-@router.delete("/{assignment_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_assignment(
-    assignment_id: str,
-    request: Request,
-    user = Depends(get_current_user)
-):
+# PATCH an assignment
+@router.patch("/{course_id}/assignments/{assignment_id}", response_model=AssignmentResponse)
+async def update_assignment(course_id: str, assignment_id: str, request: Request, updates: AssignmentUpdate, user = Depends(get_current_user)):
     try:
-        auth_header = request.headers.get("Authorization")
-        token = auth_header.split(" ")[1]
+        token = request.headers.get("Authorization").split(" ")[1]
         supabase.postgrest.auth(token)
 
+        update_data = updates.model_dump(exclude_unset=True)
+        if "due_date" in update_data and update_data["due_date"]:
+            update_data["due_date"] = str(update_data["due_date"])
+
         response = supabase.table("assignments")\
-            .delete()\
+            .update(update_data)\
             .eq("id", assignment_id)\
+            .eq("course_id", course_id)\
             .eq("user_id", user.id)\
             .execute()
+        return response.data[0]
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
-        if len(response.data) == 0:
-            raise HTTPException(status_code=404, detail="Assignment not found")
-            
+# DELETE an assignment
+@router.delete("/{course_id}/assignments/{assignment_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_assignment(course_id: str, assignment_id: str, request: Request, user = Depends(get_current_user)):
+    try:
+        token = request.headers.get("Authorization").split(" ")[1]
+        supabase.postgrest.auth(token)
+
+        supabase.table("assignments")\
+            .delete()\
+            .eq("id", assignment_id)\
+            .eq("course_id", course_id)\
+            .eq("user_id", user.id)\
+            .execute()
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

@@ -195,13 +195,13 @@ const Dashboard: React.FC = () => {
                 </Typography>
                 <Stack spacing={1}>
                   <Box display="flex" gap={1} flexWrap="wrap">
-                    <Chip label={`${course.credits} credits`} size="small" />
+                    <Typography variant="body2" fontSize="0.875rem">
+                      {course.credits} credits
+                    </Typography>
                     {course.semester && (
-                      <Chip
-                        label={course.semester}
-                        size="small"
-                        variant="outlined"
-                      />
+                      <Typography variant="body2" fontSize="0.875rem">
+                        {course.semester}
+                      </Typography>
                     )}
                   </Box>
                   <Typography variant="caption" color="text.secondary">

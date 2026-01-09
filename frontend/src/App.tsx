@@ -16,6 +16,7 @@ import Signup from "./pages/signup/Signup";
 import Account from "./pages/account/Account";
 import Dashboard from "./pages/dashboard/Dashboard";
 import Course from "./pages/course/Course";
+import Assignment from "./pages/assignment/Assignment";
 import PrivacyPolicy from "./pages/legal/PrivacyPolicy";
 import TermsOfService from "./pages/legal/TermsOfService";
 
@@ -42,6 +43,10 @@ const App: React.FC = () => {
                 <Route path="/account" element={<Account />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/courses/:id" element={<Course />} />
+                <Route
+                  path="/courses/:courseId/assignments/:assignmentId"
+                  element={<Assignment />}
+                />
                 <Route path="/privacy" element={<PrivacyPolicy />} />
                 <Route path="/terms" element={<TermsOfService />} />
               </Routes>

@@ -8,7 +8,10 @@ import {
   Card,
   CardContent,
   Chip,
+  Collapse,
   Container,
+  IconButton,
+  TextField,
   Typography,
   Stack,
 } from "@mui/material";
@@ -22,6 +25,15 @@ interface Course {
   created_at: string;
 }
 
+interface Assignment {
+  id: string;
+  title: string;
+  weight?: number;
+  max_score?: number;
+  due_date?: string;
+  created_at: string;
+}
+
 const Course: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -30,8 +42,83 @@ const Course: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [loadingAssignments, setLoadingAssignments] = useState(false);
+  const [showAddAssignment, setShowAddAssignment] = useState(false);
+  const [assignmentName, setAssignmentName] = useState("");
+  const [pointsEarned, setPointsEarned] = useState("");
+  const [pointsPossible, setPointsPossible] = useState("");
+  const [dueDate, setDueDate] = useState("");
+  const [submittingAssignment, setSubmittingAssignment] = useState(false);
 
   const apiDomain = process.env.REACT_APP_API_DOMAIN;
+
+  const getAssignments = async () => {
+    if (!id) return;
+    setLoadingAssignments(true);
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token || "";
+
+      const response = await fetch(`${apiDomain}/courses/${id}/assignments`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAssignments(data);
+      }
+    } catch (err) {
+      console.error("Error fetching assignments:", err);
+    } finally {
+      setLoadingAssignments(false);
+    }
+  };
+
+  const createAssignment = async () => {
+    if (!assignmentName) return;
+
+    setSubmittingAssignment(true);
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token || "";
+
+      const response = await fetch(`${apiDomain}/courses/${id}/assignments`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          title: assignmentName,
+          weight: pointsEarned ? parseFloat(pointsEarned) : undefined,
+          max_score: pointsPossible ? parseFloat(pointsPossible) : undefined,
+          due_date: dueDate || undefined,
+        }),
+      });
+
+      if (response.ok) {
+        setAssignmentName("");
+        setPointsEarned("");
+        setPointsPossible("");
+        setDueDate("");
+        setShowAddAssignment(false);
+        await getAssignments();
+      }
+    } catch (err) {
+      console.error("Error creating assignment:", err);
+    } finally {
+      setSubmittingAssignment(false);
+    }
+  };
 
   const deleteCourse = async () => {
     if (
@@ -93,6 +180,10 @@ const Course: React.FC = () => {
         if (response.ok) {
           const data = await response.json();
           setCourse(data);
+          // Fetch assignments after loading course
+          setTimeout(() => {
+            getAssignments();
+          }, 100);
         } else if (response.status === 404) {
           setError("Course not found");
         } else {
@@ -185,9 +276,9 @@ const Course: React.FC = () => {
               {course.name}
             </Typography>
             <Box display="flex" gap={1} flexWrap="wrap" mt={2}>
-              <Chip label={`${course.credits} credits`} />
+              <Typography variant="body2">{course.credits} credits</Typography>
               {course.semester && (
-                <Chip label={course.semester} variant="outlined" />
+                <Typography variant="body2">{course.semester}</Typography>
               )}
             </Box>
           </Box>
@@ -203,14 +294,134 @@ const Course: React.FC = () => {
 
           <Card sx={{ p: 3, bgcolor: "background.default" }}>
             <Typography variant="h6" gutterBottom>
-              Course Details
+              Assignments
             </Typography>
-            <Typography variant="body1" color="text.secondary">
-              Additional course content and features coming soon...
-            </Typography>
+            {loadingAssignments ? (
+              <Typography variant="body2" color="text.secondary">
+                Loading assignments...
+              </Typography>
+            ) : assignments.length === 0 ? (
+              <Typography variant="body2" color="text.secondary">
+                No assignments yet. Add one to get started!
+              </Typography>
+            ) : (
+              <Box
+                display="grid"
+                gap={2}
+                gridTemplateColumns={{
+                  xs: "1fr",
+                  sm: "repeat(2, 1fr)",
+                }}
+                mt={2}
+              >
+                {assignments.map((assignment) => (
+                  <Card
+                    key={assignment.id}
+                    sx={{ p: 2, bgcolor: "background.paper", height: "100%" }}
+                  >
+                    <Typography variant="subtitle2" gutterBottom>
+                      {assignment.title}
+                    </Typography>
+                    {assignment.max_score && (
+                      <Typography variant="caption" color="text.secondary">
+                        {assignment.weight ?? 0} / {assignment.max_score} points
+                      </Typography>
+                    )}
+                    {assignment.due_date && (
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        display="block"
+                      >
+                        Due:{" "}
+                        {new Date(assignment.due_date).toLocaleDateString()}
+                      </Typography>
+                    )}
+                  </Card>
+                ))}
+              </Box>
+            )}
           </Card>
 
-          <Box display="flex" gap={2}>
+          <Box mt={3}>
+            <Collapse in={showAddAssignment}>
+              <Card sx={{ p: 3, mb: 2, bgcolor: "background.paper" }}>
+                <Box
+                  display="flex"
+                  justifyContent="space-between"
+                  alignItems="center"
+                  mb={2}
+                >
+                  <Typography variant="h6">Add New Assignment</Typography>
+                  <IconButton
+                    onClick={() => setShowAddAssignment(false)}
+                    size="small"
+                  >
+                    ✕
+                  </IconButton>
+                </Box>
+                <Stack spacing={2}>
+                  <TextField
+                    label="Assignment Title"
+                    value={assignmentName}
+                    onChange={(e) => setAssignmentName(e.target.value)}
+                    fullWidth
+                    required
+                  />
+                  <TextField
+                    label="Weight (optional)"
+                    type="number"
+                    value={pointsEarned}
+                    onChange={(e) => setPointsEarned(e.target.value)}
+                    fullWidth
+                    inputProps={{ step: "0.1", min: "0" }}
+                  />
+                  <TextField
+                    label="Max Score (optional)"
+                    type="number"
+                    value={pointsPossible}
+                    onChange={(e) => setPointsPossible(e.target.value)}
+                    fullWidth
+                    inputProps={{ step: "0.1", min: "0" }}
+                  />
+                  <TextField
+                    label="Due Date (optional)"
+                    type="date"
+                    value={dueDate}
+                    onChange={(e) => setDueDate(e.target.value)}
+                    fullWidth
+                    InputLabelProps={{ shrink: true }}
+                  />
+                  <Button
+                    variant="contained"
+                    onClick={createAssignment}
+                    disabled={!assignmentName || submittingAssignment}
+                    fullWidth
+                  >
+                    {submittingAssignment ? "Adding..." : "Add Assignment"}
+                  </Button>
+                </Stack>
+              </Card>
+            </Collapse>
+
+            {!showAddAssignment && (
+              <Button
+                variant="contained"
+                onClick={() => setShowAddAssignment(true)}
+                fullWidth
+              >
+                + Add Assignment
+              </Button>
+            )}
+          </Box>
+
+          <Box
+            display="flex"
+            gap={2}
+            pt={3}
+            borderTop="1px solid"
+            borderColor="divider"
+          >
             <Button
               variant="contained"
               color="error"

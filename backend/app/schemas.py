@@ -32,20 +32,34 @@ class CourseResponse(CourseCreate):
     user_id: str
     created_at: str
     
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import date
 from uuid import UUID
 
-class AssignmentCreate(BaseModel):
-    course_id: UUID
+class AssignmentBase(BaseModel):
     title: str
-    weight: float
+    # Adding '= 0.0' makes it optional in the API and defaults it to 0
+    weight: float = 0.0  
     max_score: Optional[float] = 100.0
     due_date: Optional[date] = None
 
-class AssignmentResponse(AssignmentCreate):
+class AssignmentCreate(AssignmentBase):
+    # course_id is handled in the URL path, but included here 
+    # as optional in case your frontend sends it in the JSON body.
+    course_id: Optional[UUID] = None 
+
+class AssignmentUpdate(BaseModel):
+    """Schema for PATCH requests - all fields optional."""
+    title: Optional[str] = None
+    weight: Optional[float] = None
+    score_achieved: Optional[float] = None
+    max_score: Optional[float] = None
+    due_date: Optional[date] = None
+
+class AssignmentResponse(AssignmentBase):
     id: UUID
+    course_id: UUID
     user_id: UUID
     score_achieved: Optional[float] = None
     created_at: str
